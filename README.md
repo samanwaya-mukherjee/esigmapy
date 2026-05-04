@@ -4,8 +4,8 @@
 
 | Model | Description |
 |---|---|
-| `ESIGMAHM` | Eccentric, aligned-spin IMR waveform with higher modes (arXiv:[2409.13866](https://arxiv.org/abs/2409.13866)) |
-| `ESIGMASur` | Surrogate model of the (2,2) GW-mode of `ESIGMAHM` (arXiv:[2510.00116](https://arxiv.org/abs/2510.00116))|
+| `ESIGMAHM` | Eccentric, aligned-spin IMR waveform with higher modes (arXiv:[2409.13866](https://arxiv.org/abs/2409.13866 )) |
+| `ESIGMASur` | Surrogate model of the (2,2) GW-mode of `ESIGMAHM` (arXiv:[2510.00116](https://arxiv.org/abs/2510.00116 ))|
 
 ---
 
