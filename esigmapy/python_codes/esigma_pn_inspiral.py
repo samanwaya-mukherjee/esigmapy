@@ -237,18 +237,21 @@ def zed_n(e: float) -> float:
 
 def x_dot_0pn(e: float, eta: float) -> float:
     """Eq. (A26)"""
+    e0   = 2.0 * eta * 96.0 / 15.0
+    if abs(e) < 1e-12: return e0
     e2   = e * e
     e4   = e2 * e2
     ef   = 1.0 - e2
     num  = 2.0 * eta * (37.0 * e4 + 292.0 * e2 + 96.0)
     den  = 15.0 * ef**3 * np.sqrt(ef)
-    e0   = 2.0 * eta * 96.0 / 15.0
-    return (num / den) if e else e0
+    return (num / den) 
 
 ## --------- 1PN terms ------------
 
 def x_dot_1pn(e: float, eta: float) -> float:
     """Eq. (A27)"""
+    e0   = -eta * (2972.0 / 105.0 + 176.0 * eta / 5.0)
+    if abs(e) < 1e-12: return e0
     e2   = e * e
     e4   = e2 * e2
     e6   = e4 * e2
@@ -259,36 +262,37 @@ def x_dot_1pn(e: float, eta: float) -> float:
     t6   = e6  * (-11717.0  + 8288.0  * eta)
     den  = 420.0 * ef**4 * np.sqrt(ef)
     num  = -eta * (t0 + t2 + t4 + t6)
-    e0   = -eta * (2972.0 / 105.0 + 176.0 * eta / 5.0)
-    return (num / den) if e else e0
+    return (num / den)
 
 ## --------- 1.5PN terms ------------
 
 def x_dot_1_5_pn(e: float, eta: float, m1: float, m2: float,
                   S1z: float, S2z: float) -> float:
     """1.5PN spin-orbit term (Klein et al. arXiv:1801.08542, Eq. C1a)"""
+    
+    M    = m1 + m2
+    if abs(e) < 1e-12: 
+        pre = 64.0 * eta / 5.0
+        return pre * (-1.0/12.0 * (113*m1*m1*S1z + 113*m2*m2*S2z + 75*m1*m2*(S1z+S2z)) / M**2)
     e2   = e * e
     e4   = e2 * e2
     e6   = e4 * e2
     ef   = 1.0 - e2
-    M    = m1 + m2
-    if e:
-        return -(
-            m1 * m2 * (
-                (5424 + 27608*e2 + 16694*e4 + 585*e6) * m1*m1 * S1z +
-                (5424 + 27608*e2 + 16694*e4 + 585*e6) * m2*m2 * S2z +
-                3 * (1200 + 6976*e2 + 4886*e4 + 207*e6) * m1*m2 * (S1z + S2z)
-            )
-        ) / (45.0 * ef**5 * M**4)
-    else:
-        pre = 64.0 * eta / 5.0
-        return pre * (-1.0/12.0 * (113*m1*m1*S1z + 113*m2*m2*S2z + 75*m1*m2*(S1z+S2z)) / M**2)
+    
+    return -(
+        m1 * m2 * (
+            (5424 + 27608*e2 + 16694*e4 + 585*e6) * m1*m1 * S1z +
+            (5424 + 27608*e2 + 16694*e4 + 585*e6) * m2*m2 * S2z +
+            3 * (1200 + 6976*e2 + 4886*e4 + 207*e6) * m1*m2 * (S1z + S2z)
+        )
+    ) / (45.0 * ef**5 * M**4)
+        
 
 
 def x_dot_hereditary_1_5(e: float, eta: float, x: float) -> float:
     """Eq. (A28)"""
     pre = eta * x**6 * np.sqrt(x)
-    if e:
+    if abs(e) > 1e-12:
         return pre * 256.0 * np.pi * phi_e(e) / 5.0
     else:
         return pre * 256.0 * np.pi / 5.0
@@ -298,12 +302,7 @@ def x_dot_hereditary_1_5(e: float, eta: float, x: float) -> float:
 def x_dot_2pn(e: float, eta: float, x: float) -> float:
     """Eq. (A29)"""
 
-    e2 = e * e
-    e4 = e2 * e2
-    e6 = e4 * e2
-    e8 = e4 * e4
-
-    ef = 1.0 - e2
+    
     eta2 = eta * eta
 
     # Small-e limit
@@ -311,8 +310,15 @@ def x_dot_2pn(e: float, eta: float, x: float) -> float:
                     27322.0 * eta / 315.0 +
                     1888.0 * eta2 / 45.0)
 
-    if e: return e0_lim
+    if abs(e) < 1e-12: return e0_lim
+    
     else:
+        e2 = e * e
+        e4 = e2 * e2
+        e6 = e4 * e2
+        e8 = e4 * e4
+
+        ef = 1.0 - e2
         sqrt_ef = np.sqrt(ef)
 
         den = 45360.0 * ef**5 * sqrt_ef
@@ -340,17 +346,24 @@ def x_dot_2pn_SS(e: float, eta: float, m1: float, m2: float,
     """2PN spin-spin term (Quentin Henry et al., arXiv:2308.13606)"""
     kappa1 = 1.0
     kappa2 = 1.0
-    e2   = e * e
-    e4   = e2 * e2
-    e6   = e4 * e2
-    ef   = 1.0 - e2
-    ef_sqrt = np.sqrt(ef)
-    ef_55 = ef**4 * ef * ef_sqrt
+    
     M2   = (m1 + m2)**2
-    M4   = M2**2
     pre  = 64.0 * eta / 5.0
+    if abs(e) < 1e-12:
+        return pre * (
+            ((1 + 80*kappa1)*m1*m1*S1z*S1z +
+             158*m1*m2*S1z*S2z +
+             (1 + 80*kappa2)*m2*m2*S2z*S2z)
+        ) / (16.0 * M2)
 
-    if e:
+    else:
+        e2   = e * e
+        e4   = e2 * e2
+        e6   = e4 * e2
+        ef   = 1.0 - e2
+        ef_sqrt = np.sqrt(ef)
+        ef_55 = ef**4 * ef * ef_sqrt
+        M4   = M2**2
         return (
             m1 * m2 * (
                 (48*(1+80*kappa1) + 3*e6*(9+236*kappa1) +
@@ -360,23 +373,19 @@ def x_dot_2pn_SS(e: float, eta: float, m1: float, m2: float,
                  8*e2*(57+2692*kappa2) + 2*e4*(207+7472*kappa2)) * m2*m2 * S2z*S2z
             )
         ) / (60.0 * ef_55 * M4)
-    else:
-        return pre * (
-            ((1 + 80*kappa1)*m1*m1*S1z*S1z +
-             158*m1*m2*S1z*S2z +
-             (1 + 80*kappa2)*m2*m2*S2z*S2z)
-        ) / (16.0 * M2)
+    
 
 ## --------- 2.5PN terms ------------
 
 def x_dot_hereditary_2_5(e: float, eta: float, x: float) -> float:
     """See Huerta et al."""
-    ef   = 1.0 - e*e
-    ef2  = ef * ef
-    e2   = e * e
+    
     pre  = eta * x**7 * np.sqrt(x)
 
-    if e:
+    if abs(e) > 1e-12:
+        ef   = 1.0 - e*e
+        ef2  = ef * ef
+        e2   = e * e
         b1 = 256.0 * np.pi * phi_e(e) / ef
         b2 = (-17599.0 * np.pi * psi_n(e) / 35.0
               - 2268.0 * eta * np.pi * zed_n(e) / 5.0
@@ -390,18 +399,19 @@ def x_dot_hereditary_2_5(e: float, eta: float, x: float) -> float:
 def x_dot_2_5pn_SO(e: float, eta: float, m1: float, m2: float,
                     S1z: float, S2z: float) -> float:
     """2.5PN spin-orbit (Quentin Henry et al., arXiv:2308.13606)"""
-    e2   = e * e
-    e4   = e2 * e2
-    e6   = e4 * e2
-    e8   = e6 * e2
-    ef   = 1.0 - e2
-    ef_sqrt = np.sqrt(ef)
+    
     M2   = (m1 + m2)**2
     M4   = M2 * M2
-    M6   = M4 * M2
     pre  = 64.0 * eta / 5.0
 
-    if e:
+    if abs(e) > 1e-12:
+        e2   = e * e
+        e4   = e2 * e2
+        e6   = e4 * e2
+        e8   = e6 * e2
+        ef   = 1.0 - e2
+        ef_sqrt = np.sqrt(ef)
+        M6   = M4 * M2
         return (
             -0.0000992063492063492 *
             m1 * m2 * (
@@ -455,7 +465,7 @@ def x_dot_hereditary_3(e: float, eta: float, x: float) -> float:
     pi2  = np.pi * np.pi
     pre  = eta * x**8
 
-    if e:
+    if abs(e) > 1e-12:
         x_3_term = (64.0 *
                     (-116761.0 * kappa_e(e) +
                      (19600.0*pi2 - 59920.0*EULER_GAMMA - 59920.0*LOG4 - 89880.0*np.log(x)) * f_e(e))
@@ -471,13 +481,7 @@ def x_dot_hereditary_3(e: float, eta: float, x: float) -> float:
 def x_dot_3pn(e: float, eta: float, x: float) -> float:
     """3PN term (Huerta et al.)"""
 
-    e2 = e * e
-    e4 = e2 * e2
-    e6 = e4 * e2
-    e8 = e4 * e4
-    e10 = e8 * e2
-
-    ef = 1.0 - e2
+    
     eta2 = eta * eta
     pi2 = np.pi * np.pi
 
@@ -492,6 +496,14 @@ def x_dot_3pn(e: float, eta: float, x: float) -> float:
     )
 
     if abs(e)<1e-12: return e0_lim
+
+    e2 = e * e
+    e4 = e2 * e2
+    e6 = e4 * e2
+    e8 = e4 * e4
+    e10 = e8 * e2
+
+    ef = 1.0 - e2
 
     sqrt_ef = np.sqrt(ef)
 
@@ -577,18 +589,19 @@ def x_dot_3pn(e: float, eta: float, x: float) -> float:
 def x_dot_3pn_SO(e: float, eta: float, m1: float, m2: float,
                   S1z: float, S2z: float) -> float:
     """3PN spin-orbit (Quentin Henry et al., arXiv:2308.13606)"""
-    e2   = e * e
-    e4   = e2 * e2
-    e6   = e4 * e2
-    e8   = e6 * e2
-    ef   = 1.0 - e2
-    ef_sqrt = np.sqrt(ef)
-    ef_65 = ef**6 * ef_sqrt
+    
     M2   = (m1 + m2)**2
     M4   = M2 * M2
     pre  = 64.0 * eta / 5.0
 
-    if e:
+    if abs(e) > 1e-12:
+        e2   = e * e
+        e4   = e2 * e2
+        e6   = e4 * e2
+        e8   = e6 * e2
+        ef   = 1.0 - e2
+        ef_sqrt = np.sqrt(ef)
+        ef_65 = ef**6 * ef_sqrt
         return (
             -9.645061728395062e-6 *
             m1 * m2 * np.pi * (
@@ -615,20 +628,9 @@ def x_dot_3pn_SS(e: float, eta: float,
 
     pre_factor = 64.0 * eta / 5.0
 
-    e2 = e * e
-    e4 = e2 * e2
-    e6 = e4 * e2
-    e8 = e6 * e2
-
-    e_fact = 1.0 - e2
-    e_fact_sqrt = np.sqrt(e_fact)
-
-    e_fact_65 = (e_fact**6) * e_fact_sqrt
-
     M = m1 + m2
     M2 = M * M
     M4 = M2 * M2
-    M6 = M4 * M2
 
     # --- Small-e fallback (better with tolerance) ---
     if abs(e) < 1e-12:
@@ -646,7 +648,17 @@ def x_dot_3pn_SS(e: float, eta: float,
                      (1841 + 1318 * kappa2) * S2z * S2z)
             ) / (672.0 * M4)
         )
+    e2 = e * e
+    e4 = e2 * e2
+    e6 = e4 * e2
+    e8 = e6 * e2
 
+    e_fact = 1.0 - e2
+    e_fact_sqrt = np.sqrt(e_fact)
+
+    e_fact_65 = (e_fact**6) * e_fact_sqrt
+    M6 = M4 * M2
+    
     # --- Main expression ---
     term1 = (
         27 * e8 * (15141 + 109852 * kappa1)
@@ -801,7 +813,7 @@ def x_dot_3_5pnSO(e: float, eta: float, m1: float, m2: float,
         / M**6
     )
     val_e = val_e0  #placeholder for e-dependent expression
-    return val_e if e else val_e0
+    return val_e if abs(e) > 1e-12 else val_e0
 
 
 def x_dot_3_5pn_SS(e: float, eta: float, m1: float, m2: float,
@@ -817,7 +829,7 @@ def x_dot_3_5pn_SS(e: float, eta: float, m1: float, m2: float,
               (1 + 160*kappa2)*m2*m2*S2z*S2z)
     ) / (8.0 * M2)
     val_e = val_e0  #placeholder for e-dependent expression
-    return val_e if e else val_e0
+    return val_e if abs(e) > 1e-12 else val_e0
 
 
 def x_dot_3_5pn_cubicSpin(e: float, eta: float, m1: float, m2: float,
@@ -837,7 +849,7 @@ def x_dot_3_5pn_cubicSpin(e: float, eta: float, m1: float, m2: float,
         / M**4
     )
     val_e = val_e0  #placeholder for e-dependent expression
-    return val_e if e else val_e0
+    return val_e if abs(e) > 1e-12 else val_e0
 
 
 def x_dot_3_5_pn(e: float, eta: float) -> float:
@@ -846,7 +858,7 @@ def x_dot_3_5_pn(e: float, eta: float) -> float:
             (-4415.0/4032.0 + 358675.0*eta/6048.0 + 91495.0*eta*eta/1512.0)
             / 5.0)
     val_e = val_e0  #placeholder for e-dependent expression
-    return val_e if e else val_e0
+    return val_e if abs(e) > 1e-12 else val_e0
 
 ## --------- 4PN and 4.5PN terms ------------
 
@@ -867,7 +879,7 @@ def x_dot_4pn(e: float, eta: float, x: float) -> float:
         (124741 - 582500*eta)*np.log(x)/8820.0
     )
     val_e = val_e0  #placeholder for e-dependent expression
-    return val_e if e else val_e0
+    return val_e if abs(e) > 1e-12 else val_e0
 
 def x_dot_4pnSO(e: float, eta: float, m1: float, m2: float,
                  S1z: float, S2z: float) -> float:
@@ -882,7 +894,7 @@ def x_dot_4pnSO(e: float, eta: float, m1: float, m2: float,
               m1**3*m2*(75131*S1z + 119880*S2z)) / M**4
     )
     val_e = val_e0  #placeholder for e-dependent expression
-    return val_e if e else val_e0
+    return val_e if abs(e) > 1e-12 else val_e0
 
 
 def x_dot_4pnSS(e: float, eta: float, m1: float, m2: float,
@@ -902,7 +914,7 @@ def x_dot_4pnSS(e: float, eta: float, m1: float, m2: float,
         / (72576.0 * M**6)
     )
     val_e = val_e0  #placeholder for e-dependent expression
-    return val_e if e else val_e0
+    return val_e if abs(e) > 1e-12 else val_e0
 
 def x_dot_4_5_pn(e: float, eta: float, x: float) -> float:
     """4.5PN non-spinning (uses e=0 limit)"""
@@ -916,7 +928,7 @@ def x_dot_4_5_pn(e: float, eta: float, x: float) -> float:
         3424*np.pi*np.log(x)/105.0
     )
     val_e = val_e0  #placeholder for e-dependent expression
-    return val_e if e else val_e0
+    return val_e if abs(e) > 1e-12 else val_e0
 
 
 # Self-Force (SF) higher-order terms in addition to x_dot
@@ -1001,7 +1013,7 @@ def e_dot_0pn(e: float, eta: float) -> float:
     """Eq. (A31)"""
     e2  = e * e
     ef  = 1.0 - e2
-    if not e:
+    if abs(e) < 1e-12:
         return 0.0
     num = -e * eta * (121.0*e2 + 304.0)
     den = 15.0 * ef**2 * np.sqrt(ef)
@@ -1011,7 +1023,7 @@ def e_dot_0pn(e: float, eta: float) -> float:
 
 def e_dot_1pn(e: float, eta: float) -> float:
     """Eq. (A32)"""
-    if not e:
+    if abs(e) < 1e-12:
         return 0.0
     e2  = e * e
     e4  = e2 * e2
@@ -1027,7 +1039,7 @@ def e_dot_1pn(e: float, eta: float) -> float:
 def e_dot_1_5pn_SO(e: float, m1: float, m2: float,
                     S1z: float, S2z: float) -> float:
     """1.5PN SO eccentricity (Klein et al. arXiv:1801.08542, Eq. C1b)"""
-    if not e:
+    if abs(e) < 1e-12:
         return 0.0
     e2  = e * e
     e4  = e2 * e2
@@ -1041,7 +1053,7 @@ def e_dot_1_5pn_SO(e: float, m1: float, m2: float,
     )
 
 def e_rad_hereditary_1_5(e: float, eta: float, x: float) -> float:
-    if not e:
+    if abs(e) < 1e-12:
         return 0.0
     pre = 32.0 * eta * e * x**7 / 5.0
     return pre * (-985.0 * np.pi * phi_e_rad(e) / 48.0)
@@ -1049,7 +1061,9 @@ def e_rad_hereditary_1_5(e: float, eta: float, x: float) -> float:
 ## ---------- 2PN -------------
 
 def e_dot_2pn(e: float, eta: float) -> float:
-    e_2_pn = 0.0
+
+    if abs(e) < 1e-12:
+        return 0.0
 
     eta_pow_2 = eta * eta
     e_pow_2 = e * e
@@ -1087,25 +1101,23 @@ def e_dot_2pn(e: float, eta: float) -> float:
 
     e_4_rt = e_pow_4 * (565.0 / 6.0 - 113.0 * eta / 3.0)
 
-    if e != 0.0:
-        pre_factor = -e * eta / (e_fact**4 * np.sqrt(e_fact))
-        e_2_pn = pre_factor * (
-            zero_term
-            + e_2_term
-            + e_4_term
-            + e_6_term
-            + np.sqrt(e_fact) * (zero_rt + e_2_rt + e_4_rt)
-        )
-    else:
-        e_2_pn = 0.0
-
+    
+    pre_factor = -e * eta / (e_fact**4 * np.sqrt(e_fact))
+    e_2_pn = pre_factor * (
+        zero_term
+        + e_2_term
+        + e_4_term
+        + e_6_term
+        + np.sqrt(e_fact) * (zero_rt + e_2_rt + e_4_rt)
+    )
+    
     return e_2_pn
 
 
 def e_dot_2pn_SS(e: float, m1: float, m2: float,
                   S1z: float, S2z: float) -> float:
     """2PN SS eccentricity (Quentin Henry et al., arXiv:2308.13606v1)"""
-    if not e:
+    if abs(e) < 1e-12:
         return 0.0
     kappa1 = 1.0; kappa2 = 1.0
     e2  = e * e
@@ -1126,7 +1138,7 @@ def e_dot_2pn_SS(e: float, m1: float, m2: float,
 ## ---------- 2.5PN -------------
 
 def e_dot_2_5pn_SO(e: float, m1: float, m2: float, S1z: float, S2z: float) -> float:
-    if e == 0.0:
+    if abs(e) < 1e-12:
         return 0.0
 
     e_2 = e * e
@@ -1209,7 +1221,7 @@ def e_dot_2_5pn_SO(e: float, m1: float, m2: float, S1z: float, S2z: float) -> fl
     return result
 
 def e_rad_hereditary_2_5(e: float, eta: float, x: float) -> float:
-    if not e:
+    if abs(e) < 1e-12:
         return 0.0
     pre = 32.0 * eta * e * x**4 * x**4 * np.sqrt(x) / 5.0
     a2  = (55691.0 * psi_e_rad(e) / 1344.0 + 19067.0 * eta * zed_e_rad(e) / 126.0) * np.pi
@@ -1218,7 +1230,7 @@ def e_rad_hereditary_2_5(e: float, eta: float, x: float) -> float:
 ## --------- 3PN -------------
 
 def e_rad_hereditary_3(e: float, eta: float, x: float) -> float:
-    if not e:
+    if abs(e) < 1e-12:
         return 0.0
     pre  = 32.0 * eta * e * x**7 / 5.0
     x32  = x * np.sqrt(x)
@@ -1227,7 +1239,7 @@ def e_rad_hereditary_3(e: float, eta: float, x: float) -> float:
     return pre * (a3 + a4)
 
 def e_dot_3pn(e: float, eta: float, x: float) -> float:
-    if e == 0.0:
+    if abs(e) < 1e-12:
         return 0.0
 
     eta_pow_2 = eta * eta
@@ -1331,7 +1343,7 @@ def e_dot_3pn(e: float, eta: float, x: float) -> float:
 def e_dot_3pn_SO(e: float, m1: float, m2: float,
                   S1z: float, S2z: float) -> float:
     """3PN SO eccentricity (Quentin Henry et al., arXiv:2308.13606v1)"""
-    if not e:
+    if abs(e) < 1e-12:
         return 0.0
     e2  = e * e
     e4  = e2 * e2
@@ -1353,7 +1365,7 @@ def e_dot_3pn_SO(e: float, m1: float, m2: float,
 import math
 
 def e_dot_3pn_SS(e: float, m1: float, m2: float, S1z: float, S2z: float) -> float:
-    if e == 0.0:
+    if abs(e) < 1e-12:
         return 0.0
 
     kappa1 = 1.0
@@ -1629,7 +1641,7 @@ def phi_dot_1pn(e: float, eta: float, u: float) -> float:
 def phi_dot_1_5_pnSO_ecc(e: float, m1: float, m2: float,
                            S1z: float, S2z: float, u: float) -> float:
     """1.5PN SO phi_dot (Klein et al. arXiv:1801.08542, Eq. B1/B2)"""
-    if not e:
+    if abs(e) < 1e-12:
         return 0.0
     cf = -1.0 + e * np.cos(u)
     return (2*e*(m1*S1z + m2*S2z)*(e - np.cos(u))) / ((-1+e*e)*(m1+m2)*cf**3)
@@ -1665,7 +1677,7 @@ def phi_dot_2pn(e: float, eta: float, u: float) -> float:
 def phi_dot_2_pnSS_ecc(e: float, m1: float, m2: float,
                         S1z: float, S2z: float, u: float) -> float:
     """2PN SS phi_dot (Klein et al. arXiv:1801.08542, Eq. B1/B2)"""
-    if not e: 
+    if abs(e) < 1e-12: 
         return 0.0
     kappa1 = 1.0; kappa2 = 1.0
     return (
@@ -2822,7 +2834,7 @@ def eccentric_x_model_odes(t, y, params):
 
     dydt = [0.0, 0.0, 0.0, 0.0]
 
-    if e != 0:
+    if abs(e) > 1e-12:
         dydt[0] = dx_dt(radiation_pn_order, eta, m1, m2, S1z, S2z, x, e)
         dydt[1] = de_dt(radiation_pn_order, eta, m1, m2, S1z, S2z, x, e)
         dydt[2] = dl_dt(eta, m1, m2, S1z, S2z, x, e)
