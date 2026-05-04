@@ -405,7 +405,7 @@ def inspiral_esigma_dynamics(
     solver = ode(rhs).set_integrator(
         "dopri5",           # RK4(5) Dormand-Prince ≈ gsl rkf45
         rtol=ode_eps,
-        atol=0.0,
+        atol=1e-12,
         nsteps=10_000,
         # max_hnil=0,
         first_step=2 * LAL_PI / phi_dot0 / 100,
