@@ -176,6 +176,7 @@ def get_inspiral_esigma_modes(
     include_conjugate_modes=True,
     return_orbital_params=False,
     return_pycbc_timeseries=True,
+    geometric_units=False,
     verbose=False,
 ):
     """
@@ -201,6 +202,9 @@ def get_inspiral_esigma_modes(
                                    ['x', 'e', 'l', 'phi', 'phidot', 'r', 'rdot']
         return_pycbc_timeseries -- If True, returns data in the form of PyCBC timeseries.
                                    True by default.
+        geometric_units         -- If True, returns data in geometric units (G=c=1) scaled by mass and distance.
+                                    Conversions: time -> time / M, distance -> distance / M,  h -> h * (distance / M)
+                                    False by default.
         verbose                 -- Verbosity flag
 
     Returns:
@@ -288,7 +292,7 @@ def get_inspiral_esigma_modes(
 
     itime = time.perf_counter()
     modes = {}
-    distance *= 1.0e6 * lal.PC_SI  # Mpc to SI conversion
+    distance_SI = distance * 1.0e6 * lal.PC_SI  # Mpc to SI conversion
     for el, em in modes_to_use:
         modes[(el, em)] = ls.SimInspiralESIGMAModeFromDynamics(
             el,
@@ -303,24 +307,38 @@ def get_inspiral_esigma_modes(
             mass2,
             spin1z,
             spin2z,
-            distance,
+            distance_SI,
         )
+    modes_dict = { k: np.array(modes[k].data.data, copy=True)
+                    for k in modes
+                        } # copy as NumPy array to perform operations
+
+    #--------------------- Converting to geometric units, if specified by user ------------------#
+    if geometric_units:
+        # Conversions: time -> time / M, distance -> distance / M,  h -> h * (distance / M)
+        M_sec = (lal.MTSUN_SI * (mass1 + mass2))
+        RbyM = ((distance_SI / lal.C_SI )/ M_sec) # distance was already converted to SI units from Mpc
+        
+        t.data.data /= M_sec
+        delta_t /= M_sec
+        for k in modes_dict:
+            modes_dict[k] *= RbyM
+    #-------------------------------------------------------------------------------------------#
 
     if return_pycbc_timeseries:
         modes = {
             k: pt.TimeSeries(
-                modes[k].data.data,
+                modes_dict[k],
                 delta_t=delta_t,
-                epoch=-delta_t * (len(modes[k].data.data) - 1),
+                epoch=-delta_t * (len(modes_dict[k]) - 1),
             )
             for k in modes
         }
-    else:
-        modes = {k: np.asarray(modes[k].data.data) for k in modes}
+    else: modes = modes_dict
 
     if verbose:
         print(f"Modes generation took: {time.perf_counter() - itime} seconds")
-
+    
     if return_orbital_params:
         orbital_var_dict = {}
         if return_orbital_params == True:
@@ -358,6 +376,7 @@ def get_inspiral_esigma_waveform(
     modes_to_use=[(2, 2), (3, 3), (4, 4)],
     return_orbital_params=False,
     return_pycbc_timeseries=True,
+    geometric_units=False,
     verbose=False,
     **kwargs,
 ):
@@ -386,6 +405,9 @@ def get_inspiral_esigma_waveform(
                                    ['x', 'e', 'l', 'phi', 'phidot', 'r', 'rdot']
         return_pycbc_timeseries -- If True, returns data in the form of PyCBC timeseries.
                                    True by default
+        geometric_units         -- If True, returns data in geometric units (G=c=1) scaled by mass and distance.
+                                    Conversions: time -> time / M, distance -> distance / M,  h -> h * (distance / M)
+                                    False by default.
         verbose                 -- Verbosity level. Available values are: 0, 1, 2
 
     Returns:
@@ -411,6 +433,7 @@ def get_inspiral_esigma_waveform(
         modes_to_use=modes_to_use,
         include_conjugate_modes=True,  # Always include conjugate modes while generating polarizations
         return_orbital_params=return_orbital_params,
+        geometric_units=geometric_units,
         verbose=verbose,
         return_pycbc_timeseries=False,
     )
@@ -419,13 +442,29 @@ def get_inspiral_esigma_waveform(
         t, orbital_var_dict, modes_inspiral = retval
     else:
         t, modes_inspiral = retval
-
-    hp, hc = esigmapy.utils.get_polarizations_from_multipoles(
-        modes_inspiral,
-        inclination=inclination,
-        coa_phase=np.pi / 2 - coa_phase,
-        verbose=verbose,
-    )
+    
+    #----------------------- Converting to geometric units, if specified by user ------------------#
+    if geometric_units:
+        M_sec = (lal.MTSUN_SI * (mass1 + mass2))
+        RbyM = ((distance * lal.PC_SI * 1e6 / lal.C_SI )/ M_sec)
+        for key in modes_inspiral:
+            modes_inspiral[key] /= RbyM #temporarily dividing by RbyM to get back to SI units 
+        hp, hc = esigmapy.utils.get_polarizations_from_multipoles(
+            modes_inspiral, 
+            inclination=inclination,
+            coa_phase=np.pi / 2 - coa_phase,
+            verbose=verbose,
+            )
+        hp *= RbyM
+        hc *= RbyM
+        delta_t /= M_sec
+    else:
+        hp, hc = esigmapy.utils.get_polarizations_from_multipoles(
+            modes_inspiral,
+            inclination=inclination,
+            coa_phase=np.pi / 2 - coa_phase,
+            verbose=verbose,
+        )
 
     if return_pycbc_timeseries:
         hp = pt.TimeSeries(hp, delta_t=delta_t, epoch=-delta_t * (len(hp) - 1))
@@ -671,6 +710,7 @@ def get_imr_esigma_modes(
     return_hybridization_info=False,
     return_orbital_params=False,
     return_pycbc_timeseries=True,
+    geometric_units=False,
     failsafe=True,
     verbose=False,
 ):
@@ -746,6 +786,9 @@ def get_imr_esigma_modes(
                                      inspiral portion of the waveform!
         return_pycbc_timeseries -- If True, returns data in the form of PyCBC timeseries.
                                    True by default.
+        geometric_units         -- If True, returns data in geometric units (G=c=1) scaled by mass and distance.
+                                    Conversions: time -> time / M, distance -> distance / M,  h -> h * (distance / M)
+                                    False by default.
         failsafe                  -- If True, we make reasonable choices for the
                                      user, if the inputs to this method lead
                                      into exceptions.
@@ -1042,6 +1085,17 @@ eccentricity at the end of inspiral was {orbital_eccentricity[-1]}
     idx_peak = abs(modes_imr_numpy[mode_to_align_by]).argmax()
     t_peak = idx_peak * delta_t
 
+    #--------------------- Converting to geometric units, if specified by user ------------------#
+    if geometric_units:
+        # Conversions: time -> time / M, distance -> distance / M,  h -> h * (distance / M)
+        M_sec = (lal.MTSUN_SI * (mass1 + mass2))
+        RbyM = ((distance * lal.PC_SI * 1e6 / lal.C_SI )/ M_sec)
+        delta_t /= M_sec
+        t_peak /= M_sec
+        for k in modes_imr_numpy:
+            modes_imr_numpy[k] *= RbyM
+    #-------------------------------------------------------------------------------------------#
+
     modes_imr = {}
     if return_pycbc_timeseries:
         itime = time.perf_counter()
@@ -1109,6 +1163,7 @@ def get_imr_esigma_waveform(
     return_hybridization_info=False,
     return_orbital_params=False,
     return_pycbc_timeseries=True,
+    geometric_units=False,
     failsafe=True,
     verbose=False,
     **kwargs,
@@ -1176,6 +1231,9 @@ def get_imr_esigma_waveform(
                                      inspiral portion of the waveform!
         return_pycbc_timeseries -- If True, returns data in the form of PyCBC timeseries.
                                    True by default.
+        geometric_units         -- If True, returns data in geometric units (G=c=1) scaled by mass and distance.
+                                    Conversions: time -> time / M, distance -> distance / M,  h -> h * (distance / M)
+                                    False by default.
         failsafe                  -- If True, we make reasonable choices for the
                                      user, if the inputs to this method lead
                                      into exceptions.
@@ -1217,6 +1275,7 @@ def get_imr_esigma_waveform(
         return_hybridization_info=return_hybridization_info,
         return_orbital_params=return_orbital_params,
         return_pycbc_timeseries=return_pycbc_timeseries,
+        geometric_units=geometric_units,
         failsafe=failsafe,
         verbose=verbose,
     )
@@ -1239,12 +1298,28 @@ def get_imr_esigma_waveform(
         else:
             t, modes_imr = retval
 
-    hp, hc = esigmapy.utils.get_polarizations_from_multipoles(
-        modes_imr,
-        inclination=inclination,
-        coa_phase=np.pi / 2 - coa_phase,
-        verbose=verbose,
-    )
+    #----------------------- Converting to geometric units, if specified by user ------------------#
+    if geometric_units:
+        M_sec = (lal.MTSUN_SI * (mass1 + mass2))
+        RbyM = ((distance * lal.PC_SI * 1e6 / lal.C_SI )/ M_sec)
+        for key in modes_imr:
+            modes_imr[key] /= RbyM #temporarily dividing by RbyM to get back to SI units 
+        hp, hc = esigmapy.utils.get_polarizations_from_multipoles(
+            modes_imr, 
+            inclination=inclination,
+            coa_phase=np.pi / 2 - coa_phase,
+            verbose=verbose,
+            )
+        hp *= RbyM
+        hc *= RbyM
+    else:
+        hp, hc = esigmapy.utils.get_polarizations_from_multipoles(
+            modes_imr,
+            inclination=inclination,
+            coa_phase=np.pi / 2 - coa_phase,
+            verbose=verbose,
+        )
+
     if return_pycbc_timeseries:
         if return_hybridization_info and return_orbital_params:
             return orbital_vars_dict, retval, hp, hc
