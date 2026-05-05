@@ -670,6 +670,7 @@ def get_imr_esigma_modes(
     merger_ringdown_approximant="NRSur7dq4",
     return_hybridization_info=False,
     return_orbital_params=False,
+    return_pycbc_timeseries=True,
     failsafe=True,
     verbose=False,
 ):
@@ -743,6 +744,8 @@ def get_imr_esigma_modes(
                                   ['x', 'e', 'l', 'phi', 'phidot', 'r', 'rdot'].
                                      Note that these are available only for the
                                      inspiral portion of the waveform!
+        return_pycbc_timeseries -- If True, returns data in the form of PyCBC timeseries.
+                                   True by default.
         failsafe                  -- If True, we make reasonable choices for the
                                      user, if the inputs to this method lead
                                      into exceptions.
@@ -750,12 +753,14 @@ def get_imr_esigma_modes(
 
     Returns:
     --------
-        modes_imr         -- Dictionary of IMR GW modes (PyCBC TimeSeries)
+        t                 -- Time grid (in seconds).
+                             Returned only if return_pycbc_timeseries=False
         orbital_var_dict  -- Dictionary of evolution of orbital elements.
                              Returned only if the flag `return_orbital_params`
                              is set
         retval            -- Hybridization related data. Returned only if the
                              flag `return_hybridization_info` is set
+        modes_imr         -- Dictionary of IMR GW modes (PyCBC TimeSeries)
     """
     if not hasattr(ls, merger_ringdown_approximant):
         raise IOError(
@@ -1037,29 +1042,46 @@ eccentricity at the end of inspiral was {orbital_eccentricity[-1]}
     idx_peak = abs(modes_imr_numpy[mode_to_align_by]).argmax()
     t_peak = idx_peak * delta_t
 
-    itime = time.perf_counter()
     modes_imr = {}
-    for el, em in modes_imr_numpy:
-        modes_imr[(el, em)] = pt.TimeSeries(
-            modes_imr_numpy[(el, em)], delta_t=delta_t, epoch=-1 * t_peak
-        )
-    if verbose > 4:
-        print(
-            "Time taken to store in pycbc.TimeSeries is {} secs".format(
-                time.perf_counter() - itime
-            )
-        )
+    if return_pycbc_timeseries:
+        itime = time.perf_counter()
+        for el, em in modes_imr_numpy:
+            modes_imr[(el, em)] = pt.TimeSeries(
+                modes_imr_numpy[(el, em)], delta_t=delta_t, epoch=-1 * t_peak
+                )
+            if verbose > 4:
+                print(
+                    "Time taken to store in pycbc.TimeSeries is {} secs".format(
+                        time.perf_counter() - itime
+                    )
+                )
+    else:
+        t = None
+        for el, em in modes_imr_numpy:
+            modes_imr[(el, em)] = modes_imr_numpy[(el, em)]
+            if t is None: # avoiding creating time array multiple times, since it's the same for all modes
+                t = np.arange(len(modes_imr_numpy[(el, em)])) * delta_t - t_peak
 
     if verbose:
         print("blended.")
 
-    if return_hybridization_info and return_orbital_params_user:
-        return modes_imr, orbital_vars_dict, retval
-    elif return_orbital_params_user:
-        return modes_imr, orbital_vars_dict
-    elif return_hybridization_info:
-        return modes_imr, retval
-    return modes_imr
+    if return_pycbc_timeseries:
+        if return_hybridization_info and return_orbital_params_user:
+            return orbital_vars_dict, retval, modes_imr
+        elif return_orbital_params_user:
+            return orbital_vars_dict, modes_imr
+        elif return_hybridization_info:
+            return retval, modes_imr
+        return modes_imr
+    
+    else:
+        if return_hybridization_info and return_orbital_params_user:
+            return t, orbital_vars_dict, retval, modes_imr
+        elif return_orbital_params_user:
+            return t, orbital_vars_dict, modes_imr
+        elif return_hybridization_info:
+            return t, retval, modes_imr
+        return t, modes_imr
 
 
 def get_imr_esigma_waveform(
@@ -1086,6 +1108,7 @@ def get_imr_esigma_waveform(
     merger_ringdown_approximant="NRSur7dq4",
     return_hybridization_info=False,
     return_orbital_params=False,
+    return_pycbc_timeseries=True,
     failsafe=True,
     verbose=False,
     **kwargs,
@@ -1151,6 +1174,8 @@ def get_imr_esigma_waveform(
                                   ['x', 'e', 'l', 'phi', 'phidot', 'r', 'rdot'].
                                      Note that these are available only for the
                                      inspiral portion of the waveform!
+        return_pycbc_timeseries -- If True, returns data in the form of PyCBC timeseries.
+                                   True by default.
         failsafe                  -- If True, we make reasonable choices for the
                                      user, if the inputs to this method lead
                                      into exceptions.
@@ -1158,11 +1183,13 @@ def get_imr_esigma_waveform(
 
     Returns:
     --------
-        hp, hc       -- Plus and cross IMR GW polarizations PyCBC TimeSeries
+        t                 -- Time grid (in seconds).
+                             Returned only if return_pycbc_timeseries=False
         orbital_vars_dict -- Dictionary of evolution of orbital elements.
                         Returned only if return_orbital_params is specified
         retval       -- Hybridization related data.
                         Returned only if return_hybridization_info is True
+        hp, hc       -- Plus and cross IMR GW polarizations PyCBC TimeSeries
     """
 
     retval = get_imr_esigma_modes(
@@ -1189,17 +1216,28 @@ def get_imr_esigma_waveform(
         merger_ringdown_approximant=merger_ringdown_approximant,
         return_hybridization_info=return_hybridization_info,
         return_orbital_params=return_orbital_params,
+        return_pycbc_timeseries=return_pycbc_timeseries,
         failsafe=failsafe,
         verbose=verbose,
     )
-    if return_hybridization_info and return_orbital_params:
-        modes_imr, orbital_vars_dict, retval = retval
-    elif return_hybridization_info:
-        modes_imr, retval = retval
-    elif return_orbital_params:
-        modes_imr, orbital_vars_dict = retval
+    if return_pycbc_timeseries:
+        if return_hybridization_info and return_orbital_params:
+            orbital_vars_dict, retval, modes_imr  = retval
+        elif return_hybridization_info:
+            retval, modes_imr = retval
+        elif return_orbital_params:
+            orbital_vars_dict, modes_imr = retval
+        else:
+            modes_imr = retval
     else:
-        modes_imr = retval
+        if return_hybridization_info and return_orbital_params:
+            t, orbital_vars_dict, retval, modes_imr  = retval
+        elif return_hybridization_info:
+            t, retval, modes_imr = retval
+        elif return_orbital_params:
+            t, orbital_vars_dict, modes_imr = retval
+        else:
+            t, modes_imr = retval
 
     hp, hc = esigmapy.utils.get_polarizations_from_multipoles(
         modes_imr,
@@ -1207,11 +1245,19 @@ def get_imr_esigma_waveform(
         coa_phase=np.pi / 2 - coa_phase,
         verbose=verbose,
     )
-
-    if return_hybridization_info and return_orbital_params:
-        return hp, hc, orbital_vars_dict, retval
-    elif return_hybridization_info:
-        return hp, hc, retval
-    elif return_orbital_params:
-        return hp, hc, orbital_vars_dict
-    return hp, hc
+    if return_pycbc_timeseries:
+        if return_hybridization_info and return_orbital_params:
+            return orbital_vars_dict, retval, hp, hc
+        elif return_hybridization_info:
+            return retval, hp, hc
+        elif return_orbital_params:
+            return orbital_vars_dict, hp, hc
+        return hp, hc
+    else:
+        if return_hybridization_info and return_orbital_params:
+            return t, orbital_vars_dict, retval, hp, hc
+        elif return_hybridization_info:
+            return t, retval, hp, hc
+        elif return_orbital_params:
+            return t, orbital_vars_dict, hp, hc
+        return t, hp, hc
