@@ -34,6 +34,53 @@ LOG4        = 1.38629436111989061883446424292
 LOG5        = 1.60943791243410037460075933323
 REAL8_FAIL_NAN = float('nan')
 
+# ============ Utility functions =========================================
+
+def SymMassRatio(q: float) -> float:
+    """Symmetric mass ratio from mass ratio q (can be >1 or <1)."""
+    return q / (1.0 + q)**2
+
+
+def SmallMassRatio(eta: float) -> float:
+    """q<1 mass ratio from symmetric mass ratio eta."""
+    return (1.0 - 2.0*eta - np.sqrt(1.0 - 4.0*eta)) / (2.0*eta)
+
+def polygamma(n: int, z: complex, mp_dps=30):
+    from scipy.special import digamma # Look up the polygamma definition in LALSimESIGMA.c, line number 490
+    import mpmath as mp
+    """
+    General polygamma wrapper:
+      n = 0  → digamma (ψ)
+      n > 0  → polygamma (ψ^(n)) via mpmath
+
+    Supports complex z.
+
+    Parameters
+    ----------
+    n : int
+        Order of the polygamma function (n >= 0)
+    z : float or complex
+        Evaluation point
+    mp_dps : int
+        Decimal precision for mpmath
+
+    Returns
+    -------
+    complex
+    """
+    if n < 0:
+        raise ValueError("n must be >= 0")
+
+    # Use SciPy for digamma (fast, supports complex)
+    if n == 0:
+        return digamma(z)
+
+    # Use mpmath for higher orders (complex-safe)
+    mp.mp.dps = mp_dps
+    z_mp = mp.mpc(z.real, z.imag) if isinstance(z, complex) else mp.mpf(z)
+    return complex(mp.polygamma(n, z_mp))
+
+
 # ------ Eccentric enhancement factors -------------------------------
 
 def phi_e(e: float) -> float:
@@ -458,6 +505,24 @@ def x_dot_2_5pn_SO(e: float, eta: float, m1: float, m2: float,
              4*m1*m2**3*(2427*S1z + 5917*S2z)) / M4
         )
 
+def x_dot_2_5pn_SF(e: float, eta: float, S1z: float) -> float:
+    """
+    This piece comes from the horizon flux.
+    """
+    pre_factor = 64. * eta / 5.
+    
+    # Pre-calculating the e=0 case
+    # Note: s1z**3 is used for readability; s1z * s1z * s1z is slightly faster
+    x_2_5pn_SF_e0 = pre_factor * (-504. * S1z - 1512. * S1z**3) / 2016.
+
+    # Logic preserved: currently returns the same value for all e
+    if np.abs(e) > 1e-12:
+        x_2_5pn_SF = x_2_5pn_SF_e0
+    else:
+        x_2_5pn_SF = x_2_5pn_SF_e0
+    
+    return x_2_5pn_SF
+
 ## --------- 3PN terms ------------
 
 def x_dot_hereditary_3(e: float, eta: float, x: float) -> float:
@@ -860,6 +925,21 @@ def x_dot_3_5_pn(e: float, eta: float) -> float:
     val_e = val_e0  #placeholder for e-dependent expression
     return val_e if abs(e) > 1e-12 else val_e0
 
+def x_dot_3_5pn_SF(e: float, eta: float, S1z: float) -> float:
+    """
+    This piece comes from the horizon flux (3.5PN term).
+    """
+    pre_factor: float = 64. * eta / 5.
+    
+    x_3_5pn_SF_e0: float = pre_factor * ((-16632. * S1z - 38556. * S1z**3) / 12096.)
+
+    if np.abs(e) > 1e-12:
+        x_3_5pn_SF = x_3_5pn_SF_e0
+    else:
+        x_3_5pn_SF = x_3_5pn_SF_e0
+        
+    return x_3_5pn_SF
+
 ## --------- 4PN and 4.5PN terms ------------
 
 def x_dot_4pn(e: float, eta: float, x: float) -> float:
@@ -896,6 +976,46 @@ def x_dot_4pnSO(e: float, eta: float, m1: float, m2: float,
     val_e = val_e0  #placeholder for e-dependent expression
     return val_e if abs(e) > 1e-12 else val_e0
 
+def x_dot_4pn_SF(e: float, eta: float, S1z: float) -> float:
+    """
+    4PN Self-Force term from the horizon flux.
+    Note: Python uses 'j' for the imaginary unit. Complex(0, 2) in C is 2j in Python.
+    """
+    pre_factor = 64. * eta / 5.
+    S1z2 = S1z * S1z
+    S1z3 = S1z2 * S1z
+    S1z4 = S1z3 * S1z
+    # Common denominator used in the PolyGamma arguments
+    denom = np.sqrt(1.0 - S1z2)
+    
+    # gsl_sf_psi_n(0, z) is the digamma function
+    # Complex(0, 2) * S1z is 2j * S1z in Python
+    PolyGammaFunc01 = polygamma(0, 3.0 - (2j * S1z) / denom)
+    PolyGammaFunc02 = polygamma(0, 3.0 + (2j * S1z) / denom)
+    
+    inner_term = (
+        -1 + 15 * S1z2 + 42 * S1z4 +
+        np.sqrt(1 - S1z2) +
+        13 * S1z2 * np.sqrt(1 - S1z2) +
+        6 * S1z4 * np.sqrt(1 - S1z2) +
+        2j * PolyGammaFunc01 * (S1z + 3 * S1z3) -
+        2j * PolyGammaFunc02 * (S1z + 3 * S1z3)
+    )
+    
+    # Calculate the e=0 case
+    x_4pn_SF_e0_complex = pre_factor * (inner_term / 2.0)
+    
+    # If the original C code returns REAL8, it likely implicitly casts to real or 
+    # the imaginary parts cancel out. We use .real to ensure a float return.
+    x_4pn_SF_e0: float = float(x_4pn_SF_e0_complex.real)
+
+    # Maintaining the structure of your original C logic
+    if np.abs(e) > 1e-12:
+        x_4pn_SF = x_4pn_SF_e0
+    else:
+        x_4pn_SF = x_4pn_SF_e0
+
+    return x_4pn_SF
 
 def x_dot_4pnSS(e: float, eta: float, m1: float, m2: float,
                  S1z: float, S2z: float) -> float:
@@ -2572,6 +2692,7 @@ def dx_dt(radiation_pn_order: int,
 
     if radiation_pn_order >= 5:
         inst += x_dot_2_5pn_SO(e, eta, m1, m2, S1z, S2z) * x2 * np.sqrt(x)
+        inst += x_dot_2_5pn_SF(e, eta, S1z) * x2 * np.sqrt(x)
 
     if radiation_pn_order >= 6:
         inst += x_dot_3pn(e, eta, x) * x3
@@ -2583,6 +2704,7 @@ def dx_dt(radiation_pn_order: int,
         inst += x_dot_3_5_pn(e, eta) * x3 * np.sqrt(x)
         inst += x_dot_3_5pn_SS(e, eta, m1, m2, S1z, S2z) * x3 * np.sqrt(x)
         inst += x_dot_3_5pn_cubicSpin(e, eta, m1, m2, S1z, S2z) * x3 * np.sqrt(x)
+        inst += x_dot_3_5pn_SF(e, eta, S1z) * x3 * np.sqrt(x)
     
     if radiation_pn_order >= 8:
         inst += (
@@ -2590,6 +2712,7 @@ def dx_dt(radiation_pn_order: int,
             + x_dot_4pnSO(e, eta, m1, m2, S1z, S2z)
             + x_dot_4pnSS(e, eta, m1, m2, S1z, S2z)
         ) * (x2 * x2)
+        inst += x_dot_4pn_SF(e, eta, S1z) * (x2 * x2)
 
     if radiation_pn_order >= 9:
         inst += x_dot_4_5_pn(e, eta, x) * (x2 * x2) * np.sqrt(x)
