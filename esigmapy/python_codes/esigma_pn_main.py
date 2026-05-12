@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.integrate import ode
+from scipy.integrate import solve_ivp
 from scipy.interpolate import CubicSpline
 import math
 from .esigma_pn_inspiral import *
@@ -389,85 +389,67 @@ def inspiral_esigma_dynamics(
     # ------------------------------------------------------------------ #
     # Initial conditions  y = [x, e, l (mean anomaly), phi]
     # ------------------------------------------------------------------ #
-    u0      = pn_kepler_equation(eta, x_init, e_init, mean_anom_init)
-    r0      = separation(u0, eta, x_init, e_init, mass1, mass2, S1z, S2z)
-    y0_dot  = eccentric_x_model_odes(0.0, [x_init, e_init, mean_anom_init, 0.0], params)
-    phi_dot0 = y0_dot[3]
-
+    
     y0 = np.array([x_init, e_init, mean_anom_init, 0.0])
 
-    # ------------------------------------------------------------------ #
-    # ODE integration (RK45 via scipy)
-    # ------------------------------------------------------------------ #
+    # Define the ODE system as a function of (t, y)
     def rhs(t, y):
         return eccentric_x_model_odes(t, y, params)
+    
+    MAX_SAMPLES = 2048 * 16384 # maximum number of samples to prevent infinite loops; adjust as needed
+    
+    #=========== ODE solver using solve_ivp (LSODA)=========================#
+    
+    #--- define the termination condition as an event function ---#
+    def isco_event(t, y):
+        return y[0] - x_final   # stop when x >= x_final
 
-    solver = ode(rhs).set_integrator(
-        "dopri5",           # RK4(5) Dormand-Prince ≈ gsl rkf45
-        rtol=ode_eps,
-        atol=1e-12,
-        nsteps=10_000,
-        # max_hnil=0,
-        first_step=2 * LAL_PI / phi_dot0 / 100,
-    )
-    solver.set_initial_value(y0, 0.0)
+    isco_event.terminal = True
+    isco_event.direction = 1
+    t_max = MAX_SAMPLES * dt
+    #-----------------------------------
+    import time as tt
+    start_time = tt.time()
+    sol = solve_ivp(
+            rhs,
+            (0.0, t_max),   # large upper bound; event will stop earlier
+            y0,
+            method="LSODA",
+            rtol=ode_eps,
+            atol=1e-25,
+            max_step=dt,
+            events=isco_event,
+        )
+    print(f'time taken = {tt.time()-start_time} secs', )
+    t_arr = sol.t
+    y_arr = sol.y.T   # shape (N, 4)
 
-    MAX_SAMPLES = 2048 * 16384
-
-    t_list       = [0.0]
-    x_list       = [x_init]
-    e_list       = [e_init]
-    l_list       = [mean_anom_init]
-    phi_list     = [0.0]
-    phi_dot_list = [phi_dot0]
-    r_list       = [r0]
-    u_list       = [u0]
-
+    # NaN / Inf guard (equivalent to your check)
     bad_number = False
+    if not np.all(np.isfinite(y_arr)):
+        bad_number = True
 
-    while solver.successful():
-        solver.integrate(solver.t + dt)
+    # Unpack variables
+    x_arr   = y_arr[:, 0]
+    e_arr   = y_arr[:, 1]
+    l_arr   = y_arr[:, 2]
+    phi_arr = y_arr[:, 3]
 
-        y = solver.y
+    u_arr = np.empty_like(x_arr)
+    r_arr = np.empty_like(x_arr)
 
-        # NaN / Inf guard
-        if not np.all(np.isfinite(y)):
-            bad_number = True
-            break
+    for i, (x, e, l) in enumerate(zip(x_arr, e_arr, l_arr)):
+        ui = pn_kepler_equation(eta, x, e, l)
+        ri = separation(ui, eta, x, e, mass1, mass2, S1z, S2z)
+        u_arr[i] = ui
+        r_arr[i] = ri
 
-        t_list.append(solver.t)
-        x_list.append(y[0])
-        e_list.append(y[1])
-        l_list.append(y[2])
-        phi_list.append(y[3])
-
-        yd = eccentric_x_model_odes(solver.t, y, params)
-        phi_dot_list.append(yd[3])
-
-        ui = pn_kepler_equation(eta, y[0], y[1], y[2])
-        ri = separation(ui, eta, y[0], y[1], mass1, mass2, S1z, S2z)
-        u_list.append(ui)
-        r_list.append(ri)
-
-        if len(t_list) >= MAX_SAMPLES:
-            break
-
-        if y[0] >= x_final:
-            break
-
-    # Convert to arrays
-    t_arr       = np.array(t_list)
-    x_arr       = np.array(x_list)
-    e_arr       = np.array(e_list)
-    l_arr       = np.array(l_list)
-    phi_arr     = np.array(phi_list)
-    phi_dot_arr = np.array(phi_dot_list)
-    r_arr       = np.array(r_list)
-
-    final_i = len(t_arr) if not bad_number else len(t_arr)  # same either way here
+    final_i = len(t_arr)  
     if final_i < 4:
         raise RuntimeError("Integration produced fewer than 4 points; cannot interpolate.")
-
+    elif bad_number:
+        raise ValueError("Infinity or nan encountered!")
+    
     # ------------------------------------------------------------------ #
     # Uniform-grid interpolation
     # ------------------------------------------------------------------ #
