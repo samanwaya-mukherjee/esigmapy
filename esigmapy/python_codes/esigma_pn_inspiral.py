@@ -26,6 +26,7 @@ Notes
 
 import numpy as np
 
+
 # ------ Constants --------------------------------------------------
 EULER_GAMMA = 0.5772156649015329   # LAL_GAMMA / Euler–Mascheroni constant
 LOG2        = 0.693147180559945309417232121458
@@ -325,6 +326,8 @@ def x_dot_1_5_pn(e: float, eta: float, m1: float, m2: float,
     e4   = e2 * e2
     e6   = e4 * e2
     ef   = 1.0 - e2
+    ef5 = ef*ef*ef*ef*ef
+    M4 = M*M*M*M
     
     return -(
         m1 * m2 * (
@@ -332,13 +335,13 @@ def x_dot_1_5_pn(e: float, eta: float, m1: float, m2: float,
             (5424 + 27608*e2 + 16694*e4 + 585*e6) * m2*m2 * S2z +
             3 * (1200 + 6976*e2 + 4886*e4 + 207*e6) * m1*m2 * (S1z + S2z)
         )
-    ) / (45.0 * ef**5 * M**4)
+    ) / (45.0 * ef5 * M4)
         
 
 
 def x_dot_hereditary_1_5(e: float, eta: float, x: float) -> float:
     """Eq. (A28)"""
-    pre = eta * x**6 * np.sqrt(x)
+    pre = eta * x*x*x*x*x*x * np.sqrt(x)
     if abs(e) > 1e-12:
         return pre * 256.0 * np.pi * phi_e(e) / 5.0
     else:
@@ -542,7 +545,6 @@ def x_dot_hereditary_3(e: float, eta: float, x: float) -> float:
                   ) / 18375.0
         return pre * x_3_term_e0
 
-
 def x_dot_3pn(e: float, eta: float, x: float) -> float:
     """3PN term (Huerta et al.)"""
 
@@ -649,7 +651,6 @@ def x_dot_3pn(e: float, eta: float, x: float) -> float:
     num = eta * (bit_1 + bit_2 + bit_3 + bit_4 + bit_5 + bit_6 + bit_7)
 
     return num / den
-
 
 def x_dot_3pn_SO(e: float, eta: float, m1: float, m2: float,
                   S1z: float, S2z: float) -> float:
@@ -880,7 +881,6 @@ def x_dot_3_5pnSO(e: float, eta: float, m1: float, m2: float,
     val_e = val_e0  #placeholder for e-dependent expression
     return val_e if abs(e) > 1e-12 else val_e0
 
-
 def x_dot_3_5pn_SS(e: float, eta: float, m1: float, m2: float,
                     S1z: float, S2z: float) -> float:
     """3.5PN spin-spin"""
@@ -895,7 +895,6 @@ def x_dot_3_5pn_SS(e: float, eta: float, m1: float, m2: float,
     ) / (8.0 * M2)
     val_e = val_e0  #placeholder for e-dependent expression
     return val_e if abs(e) > 1e-12 else val_e0
-
 
 def x_dot_3_5pn_cubicSpin(e: float, eta: float, m1: float, m2: float,
                             S1z: float, S2z: float) -> float:
@@ -915,7 +914,6 @@ def x_dot_3_5pn_cubicSpin(e: float, eta: float, m1: float, m2: float,
     )
     val_e = val_e0  #placeholder for e-dependent expression
     return val_e if abs(e) > 1e-12 else val_e0
-
 
 def x_dot_3_5_pn(e: float, eta: float) -> float:
     """3.5PN non-spinning"""
@@ -1116,7 +1114,6 @@ def dxdt_4pn(x: float, eta: float) -> float:
 
     return pre_fact * bit_4pn
 
-
 ##########################################################################
 # dx_dt_4_5pn, dx_dt_5pn, dx_dt_5_5pn, dx_dt_6pn are not implemented here, 
 # as they are not needed for ESIGMAHMv1. 
@@ -1164,13 +1161,13 @@ def e_dot_1_5pn_SO(e: float, m1: float, m2: float,
     e2  = e * e
     e4  = e2 * e2
     ef  = 1.0 - e2
-    M   = m1 + m2
-    pre = e / (ef**4) * (m1*m2) / (90.0 * M**4)
+    ef4 = ef*ef*ef*ef
+    e_pre = e / ef4
+    pre = e_pre * ((m1*m2) / (90.0 *(m1 + m2) * (m1 + m2) * (m1 + m2) * (m1 + m2)))
     return pre * (
         (19688 + 28256*e2 + 2367*e4)*m1*m1*S1z +
         (19688 + 28256*e2 + 2367*e4)*m2*m2*S2z +
-        3*(4344 + 8090*e2 + 835*e4)*m1*m2*(S1z+S2z)
-    )
+        3*(4344 + 8090*e2 + 835*e4)*m1*m2*(S1z+S2z))
 
 def e_rad_hereditary_1_5(e: float, eta: float, x: float) -> float:
     if abs(e) < 1e-12:
@@ -2649,19 +2646,6 @@ def separation(
             rel_sep_2_5pn_SO(e, u, m1, m2, S1z, S2z) * x * np.sqrt(x) +
             rel_sep_3pn(e, u, eta) * x * x +
             rel_sep_3pn_SS(e, u, m1, m2, S1z, S2z) * x * x)
-
-
-
-# ============ Utility functions =========================================
-
-def SymMassRatio(q: float) -> float:
-    """Symmetric mass ratio from mass ratio q (can be >1 or <1)."""
-    return q / (1.0 + q)**2
-
-
-def SmallMassRatio(eta: float) -> float:
-    """q<1 mass ratio from symmetric mass ratio eta."""
-    return (1.0 - 2.0*eta - np.sqrt(1.0 - 4.0*eta)) / (2.0*eta)
 
 
 # ================== ODE right-hand-side dispatchers ==========================
