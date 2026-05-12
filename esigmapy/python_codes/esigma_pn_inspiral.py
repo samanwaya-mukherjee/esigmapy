@@ -1175,7 +1175,7 @@ def e_dot_1_5pn_SO(e: float, m1: float, m2: float,
 def e_rad_hereditary_1_5(e: float, eta: float, x: float) -> float:
     if abs(e) < 1e-12:
         return 0.0
-    pre = 32.0 * eta * e * x**7 / 5.0
+    pre = 32.0 * eta * e * x**4 * x*np.sqrt(x) / 5.0
     return pre * (-985.0 * np.pi * phi_e_rad(e) / 48.0)
 
 ## ---------- 2PN -------------
@@ -1343,7 +1343,7 @@ def e_dot_2_5pn_SO(e: float, m1: float, m2: float, S1z: float, S2z: float) -> fl
 def e_rad_hereditary_2_5(e: float, eta: float, x: float) -> float:
     if abs(e) < 1e-12:
         return 0.0
-    pre = 32.0 * eta * e * x**4 * x**4 * np.sqrt(x) / 5.0
+    pre = 32.0 * eta * e * x**4 * x**2 * np.sqrt(x) / 5.0
     a2  = (55691.0 * psi_e_rad(e) / 1344.0 + 19067.0 * eta * zed_e_rad(e) / 126.0) * np.pi
     return pre * a2
 
