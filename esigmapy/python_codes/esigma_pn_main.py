@@ -7,8 +7,8 @@ from .esigma_go_terms_draft import *
 import lal
 
 # Constants (LAL equivalents)
-LAL_PI = math.pi
-LAL_MTSUN_SI = 4.925491025543576e-6  # Solar mass in seconds
+LAL_PI = lal.PI 
+LAL_MTSUN_SI = lal.MTSUN_SI #4.925491025543576e-6, Solar mass in seconds
 RadiationPNOrderDefault = 8  # Default radiation reaction PN order (3PN)
 
 import os
@@ -33,74 +33,6 @@ class Params:
     m2: float
     S1z: float
     S2z: float
-# # ------------------------------------------------------------------ #
-# # Helper: populate powers of orbital variables
-# # (mirrors PopulateKeplerParams + kepler_vars struct)
-# # ------------------------------------------------------------------ #
-# @dataclass
-# class KeplerVars:
-#     eta:   float = 0.0
-#     eta2:  float = 0.0
-#     eta3:  float = 0.0
-#     eta4:  float = 0.0
-#     eta5:  float = 0.0
-#     eta6:  float = 0.0
-
-#     Mtot:  float = 0.0
-#     Mtot2: float = 0.0
-#     Mtot3: float = 0.0
-#     Mtot4: float = 0.0
-#     Mtot5: float = 0.0
-#     Mtot6: float = 0.0
-
-#     S1z:   float = 0.0
-#     S1z2:  float = 0.0
-#     S1z3:  float = 0.0
-#     S1z4:  float = 0.0
-#     S1z5:  float = 0.0
-#     S1z6:  float = 0.0
-#     S1z7:  float = 0.0
-#     S1z8:  float = 0.0
-#     S1z9:  float = 0.0
-#     S1z10: float = 0.0
-#     S1z11: float = 0.0
-#     S1z12: float = 0.0
-#     S1z13: float = 0.0
-#     S1z14: float = 0.0
-#     S1z15: float = 0.0
-#     S1z16: float = 0.0
-
-#     S2z:  float = 0.0
-#     S2z2: float = 0.0
-#     S2z3: float = 0.0
-#     S2z4: float = 0.0
-#     S2z5: float = 0.0
-#     S2z6: float = 0.0
-
-
-# def _build_kepler_vars(eta: float, total_mass: float,
-#                        S1z: float, S2z: float) -> KeplerVars:
-#     """Pre-compute and cache all integer powers used by the mode functions."""
-#     kv = KeplerVars()
-#     kv.eta  = eta
-#     kv.eta2 = eta**2;  kv.eta3 = eta**3;  kv.eta4 = eta**4
-#     kv.eta5 = eta**5;  kv.eta6 = eta**6
-
-#     kv.Mtot  = total_mass
-#     kv.Mtot2 = total_mass**2;  kv.Mtot3 = total_mass**3
-#     kv.Mtot4 = total_mass**4;  kv.Mtot5 = total_mass**5
-#     kv.Mtot6 = total_mass**6
-
-#     kv.S1z = S1z
-#     for p in range(2, 17):
-#         setattr(kv, f"S1z{p}", S1z**p)
-
-#     kv.S2z = S2z
-#     for p in range(2, 7):
-#         setattr(kv, f"S2z{p}", S2z**p)
-
-#     return kv
-
 
 # ------------------------------------------------------------------ #
 # 1.  compute_mode_from_dynamics
@@ -236,7 +168,6 @@ def inspiral_esigma_mode_from_dynamics(
     scaling inside compute_mode_from_dynamics (matches the C end result).
     """
     mode_pn_order = int(os.environ.get("ModePNOrder", ModePNOrderDefault))
-    print('Mode PN order =',mode_pn_order)
 
     return compute_mode_from_dynamics(
         l, m,
@@ -363,7 +294,6 @@ def inspiral_esigma_dynamics(
     # PN / radiation order (mirror the C env-var logic; default hardcoded)
     import os
     rad_pn_order = int(os.environ.get("RadiationPNOrder", RadiationPNOrderDefault))
-    print('Radiation PN order =',rad_pn_order)
     params = Params(
                     eta=eta,
                     radiation_pn_order=rad_pn_order,
@@ -471,7 +401,7 @@ def inspiral_esigma_dynamics(
 
     uniform_x       = interp_uniform(t_arr, x_arr)
     uniform_phi     = interp_uniform(t_arr, phi_arr)
-    uniform_phi_dot = interp_uniform(t_arr, phi_dot_arr)
+    uniform_phi_dot = interp_deriv_uniform(t_arr, phi_arr)
     uniform_r       = interp_uniform(t_arr, r_arr)
     uniform_r_dot   = interp_deriv_uniform(t_arr, r_arr)
     uniform_e       = interp_uniform(t_arr, e_arr)
