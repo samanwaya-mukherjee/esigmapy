@@ -3,7 +3,7 @@ from scipy.integrate import solve_ivp
 from scipy.interpolate import CubicSpline
 import math
 from .esigma_pn_inspiral import *
-from .esigma_go_terms_draft import *
+from .esigma_go_terms import *
 import lal
 
 # Constants (LAL equivalents)
