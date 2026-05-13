@@ -26,13 +26,12 @@ Notes
 
 import numpy as np
 
-
 # ------ Constants --------------------------------------------------
-EULER_GAMMA = 0.5772156649015329   # LAL_GAMMA / Euler–Mascheroni constant
-LOG2        = 0.693147180559945309417232121458
-LOG3        = 1.09861228866810969139524523692
-LOG4        = 1.38629436111989061883446424292
-LOG5        = 1.60943791243410037460075933323
+EULER_GAMMA = np.euler_gamma   # Euler–Mascheroni constant
+LOG2        = np.log(2.)
+LOG3        = np.log(3.)
+LOG4        = np.log(4.)
+LOG5        = np.log(5.)
 REAL8_FAIL_NAN = float('nan')
 
 # ============ Utility functions =========================================
@@ -47,8 +46,8 @@ def SmallMassRatio(eta: float) -> float:
     return (1.0 - 2.0*eta - np.sqrt(1.0 - 4.0*eta)) / (2.0*eta)
 
 def polygamma(n: int, z: complex, mp_dps=30):
-    from scipy.special import digamma # Look up the polygamma definition in LALSimESIGMA.c, line number 490
-    import mpmath as mp
+    # Look up the polygamma definition in LALSimESIGMA.c, line number 490
+    
     """
     General polygamma wrapper:
       n = 0  → digamma (ψ)
@@ -74,8 +73,10 @@ def polygamma(n: int, z: complex, mp_dps=30):
 
     # Use SciPy for digamma (fast, supports complex)
     if n == 0:
+        from scipy.special import digamma
         return digamma(z)
-
+    
+    import mpmath as mp
     # Use mpmath for higher orders (complex-safe)
     mp.mp.dps = mp_dps
     z_mp = mp.mpc(z.real, z.imag) if isinstance(z, complex) else mp.mpf(z)
@@ -210,37 +211,41 @@ def kappa_e_tilde(e: float) -> float:
 
 def phi_e_rad(e: float) -> float:
     ef   = 1.0 - e * e
+    sqef = np.sqrt(ef)
     e2   = e * e
-    pre  = 192.0 * np.sqrt(ef) / (985.0 * e2)
-    return pre * (np.sqrt(ef) * phi_e(e) - phi_e_tilde(e))
+    pre  = 192.0 * sqef / (985.0 * e2)
+    return pre * (sqef * phi_e(e) - phi_e_tilde(e))
 
 
 def psi_e_rad(e: float) -> float:
     ef   = 1.0 - e * e
+    sqef = np.sqrt(ef)
     e2   = e * e
-    pf1  = 18816.0 / (55691.0 * e2 * np.sqrt(ef))
-    pf2  = 16382.0 * np.sqrt(ef) / (55691.0 * e2)
-    b1   = np.sqrt(ef) * (1.0 - (11.0 / 7.0) * e2) * phi_e(e) - (1.0 - (3.0 / 7.0) * e2) * phi_e_tilde(e)
-    b2   = np.sqrt(ef) * psi_e(e) - psi_e_tilde(e)
+    pf1  = 18816.0 / (55691.0 * e2 * sqef)
+    pf2  = 16382.0 * sqef / (55691.0 * e2)
+    b1   = sqef * (1.0 - (11.0 / 7.0) * e2) * phi_e(e) - (1.0 - (3.0 / 7.0) * e2) * phi_e_tilde(e)
+    b2   = sqef * psi_e(e) - psi_e_tilde(e)
     return pf1 * b1 + pf2 * b2
 
 
 def zed_e_rad(e: float) -> float:
     ef   = 1.0 - e * e
+    sqef = np.sqrt(ef)
     e2   = e * e
-    pf1  = 924.0 / (19067.0 * e2 * np.sqrt(ef))
-    pf2  = 12243.0 * np.sqrt(ef) / (76268.0 * e2)
-    b1   = -ef * np.sqrt(ef) * phi_e(e) + (1.0 - (5.0 / 11.0) * e2) * phi_e_tilde(e)
-    b2   = np.sqrt(ef) * zed_e(e) - zed_e_tilde(e)
+    pf1  = 924.0 / (19067.0 * e2 * sqef)
+    pf2  = 12243.0 * sqef / (76268.0 * e2)
+    b1   = -ef * sqef * phi_e(e) + (1.0 - (5.0 / 11.0) * e2) * phi_e_tilde(e)
+    b2   = sqef * zed_e(e) - zed_e_tilde(e)
     return pf1 * b1 + pf2 * b2
 
 
 def kappa_e_rad(e: float) -> float:
     ef   = 1.0 - e * e
+    sqef = np.sqrt(ef)
     e2   = e * e
     den  = 769.0 / 96.0 - 3059665.0 * LOG2 / 700566.0 + 8190315.0 * LOG3 / 1868176.0
-    pf   = np.sqrt(ef) / e2
-    b1   = np.sqrt(ef) * kappa_e(e) - kappa_e_tilde(e)
+    pf   = sqef / e2
+    b1   = sqef * kappa_e(e) - kappa_e_tilde(e)
     return pf * b1 / den
 
 
@@ -993,9 +998,9 @@ def x_dot_4pn_SF(e: float, eta: float, S1z: float) -> float:
     
     inner_term = (
         -1 + 15 * S1z2 + 42 * S1z4 +
-        np.sqrt(1 - S1z2) +
-        13 * S1z2 * np.sqrt(1 - S1z2) +
-        6 * S1z4 * np.sqrt(1 - S1z2) +
+        denom +
+        13 * S1z2 * denom +
+        6 * S1z4 * denom +
         2j * PolyGammaFunc01 * (S1z + 3 * S1z3) -
         2j * PolyGammaFunc02 * (S1z + 3 * S1z3)
     )
@@ -1477,9 +1482,6 @@ def e_dot_3pn_SO(e: float, m1: float, m2: float,
             24*(1744704 + 8150400*e2 + 3941409*e4 + 122714*e6)*m1*m2*(S1z+S2z)
         )
     ) / (51840.0 * ef_55 * M4)
-
-
-import math
 
 def e_dot_3pn_SS(e: float, m1: float, m2: float, S1z: float, S2z: float) -> float:
     if abs(e) < 1e-12:
@@ -2638,12 +2640,12 @@ def separation(
             ) -> float:
     """Relative separation r(u) at 3PN order, including spin effects."""
 #    3PN accurate
-
+    sqx = np.sqrt(x)
     return ((1.0 / x) * rel_sep_0pn(e, u) + rel_sep_1pn(e, u, eta) +
-            rel_sep_1_5pn(e, u, m1, m2, S1z, S2z) * np.sqrt(x) +
+            rel_sep_1_5pn(e, u, m1, m2, S1z, S2z) * sqx +
             rel_sep_2pnSS(e, u, m1, m2, S1z, S2z) * x +
             rel_sep_2pn(e, u, eta) * x +
-            rel_sep_2_5pn_SO(e, u, m1, m2, S1z, S2z) * x * np.sqrt(x) +
+            rel_sep_2_5pn_SO(e, u, m1, m2, S1z, S2z) * x * sqx +
             rel_sep_3pn(e, u, eta) * x * x +
             rel_sep_3pn_SS(e, u, m1, m2, S1z, S2z) * x * x)
 
@@ -2656,8 +2658,11 @@ def dx_dt(radiation_pn_order: int,
 
     x2 = x * x
     x3 = x2 * x
-    xsqx = x * np.sqrt(x)
-    x5 = x**5
+    x5 = x3*x2
+    sqx = np.sqrt(x)
+    xsqx = x * sqx
+    x2sqx = x2 * sqx
+    x3sqx = x3 * sqx
 
     # -------------------------
     # Instantaneous PN part
@@ -2675,8 +2680,8 @@ def dx_dt(radiation_pn_order: int,
         inst += x_dot_2pn_SS(e, eta, m1, m2, S1z, S2z) * x2
 
     if radiation_pn_order >= 5:
-        inst += x_dot_2_5pn_SO(e, eta, m1, m2, S1z, S2z) * x2 * np.sqrt(x)
-        inst += x_dot_2_5pn_SF(e, eta, S1z) * x2 * np.sqrt(x)
+        inst += x_dot_2_5pn_SO(e, eta, m1, m2, S1z, S2z) * x2sqx
+        inst += x_dot_2_5pn_SF(e, eta, S1z) * x2sqx
 
     if radiation_pn_order >= 6:
         inst += x_dot_3pn(e, eta, x) * x3
@@ -2684,11 +2689,11 @@ def dx_dt(radiation_pn_order: int,
         inst += x_dot_3pn_SS(e, eta, m1, m2, S1z, S2z) * x3
 
     if radiation_pn_order >= 7:
-        inst += x_dot_3_5pnSO(e, eta, m1, m2, S1z, S2z) * x3 * np.sqrt(x)
-        inst += x_dot_3_5_pn(e, eta) * x3 * np.sqrt(x)
-        inst += x_dot_3_5pn_SS(e, eta, m1, m2, S1z, S2z) * x3 * np.sqrt(x)
-        inst += x_dot_3_5pn_cubicSpin(e, eta, m1, m2, S1z, S2z) * x3 * np.sqrt(x)
-        inst += x_dot_3_5pn_SF(e, eta, S1z) * x3 * np.sqrt(x)
+        inst += x_dot_3_5pnSO(e, eta, m1, m2, S1z, S2z) * x3sqx
+        inst += x_dot_3_5_pn(e, eta) * x3sqx
+        inst += x_dot_3_5pn_SS(e, eta, m1, m2, S1z, S2z) * x3sqx
+        inst += x_dot_3_5pn_cubicSpin(e, eta, m1, m2, S1z, S2z) * x3sqx
+        inst += x_dot_3_5pn_SF(e, eta, S1z) * x3sqx
     
     if radiation_pn_order >= 8:
         inst += (
@@ -2699,7 +2704,7 @@ def dx_dt(radiation_pn_order: int,
         inst += x_dot_4pn_SF(e, eta, S1z) * (x2 * x2)
 
     if radiation_pn_order >= 9:
-        inst += x_dot_4_5_pn(e, eta, x) * (x2 * x2) * np.sqrt(x)
+        inst += x_dot_4_5_pn(e, eta, x) * (x2 * x2) * sqx
 
     if radiation_pn_order >= 10:
         inst += 0.0 #dxdt_5pn(x, eta), not implemented
@@ -2735,7 +2740,10 @@ def de_dt(radiation_pn_order: int,
     x2 = x * x
     x3 = x2 * x
     x4 = x2 * x2
-    xsqx = x * np.sqrt(x)  
+    sqx = np.sqrt(x)
+    xsqx = x * sqx
+    x2sqx = x2 * sqx
+    x3sqx = x3 * sqx
 
     # -------------------------
     # Instantaneous PN part
@@ -2753,7 +2761,7 @@ def de_dt(radiation_pn_order: int,
         inst += e_dot_2pn_SS(e, m1, m2, S1z, S2z) * x2
 
     if radiation_pn_order >= 5:
-        inst += e_dot_2_5pn_SO(e, m1, m2, S1z, S2z) * x2 * np.sqrt(x)
+        inst += e_dot_2_5pn_SO(e, m1, m2, S1z, S2z) * x2sqx
 
     if radiation_pn_order >= 6:
         inst += e_dot_3pn(e, eta, x) * x3
@@ -2761,7 +2769,7 @@ def de_dt(radiation_pn_order: int,
         inst += e_dot_3pn_SS(e, m1, m2, S1z, S2z) * x3
 
     if radiation_pn_order >= 7:
-        inst += e_dot_3_5pn(e, eta) * x3 * np.sqrt(x)
+        inst += e_dot_3_5pn(e, eta) * x3sqx
 
     if radiation_pn_order >= 8:
         inst += 0.0 # placeholder for higher order terms, not implemented
