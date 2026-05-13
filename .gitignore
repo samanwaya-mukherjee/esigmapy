@@ -1,18 +1,20 @@
+# Ignore files and folders generated during building, installation, or local development.
+
 # Build and distribution folders
 build/
 dist/
 *.egg-info/
 
-# Python bytecode
+# Python bytecode and cache
 __pycache__/
-*.pyc
+*.py[cod]
 
-# Environments (if you use them locally)
+# Virtual environments
 venv/
-.env
+.env/
 
-# ipynb folders
+# Jupyter notebook checkpoints
 .ipynb_checkpoints/
 
-# vs code
-.vscode
+# VS Code settings
+.vscode/
