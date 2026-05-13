@@ -338,8 +338,6 @@ def inspiral_esigma_dynamics(
     isco_event.direction = 1
     t_max = MAX_SAMPLES * dt
     #-----------------------------------
-    import time as tt
-    start_time = tt.time()
     sol = solve_ivp(
             rhs,
             (0.0, t_max),   # large upper bound; event will stop earlier
@@ -350,7 +348,6 @@ def inspiral_esigma_dynamics(
             max_step=dt,
             events=isco_event,
         )
-    print(f'time taken = {tt.time()-start_time} secs', )
     t_arr = sol.t
     y_arr = sol.y.T   # shape (N, 4)
 
