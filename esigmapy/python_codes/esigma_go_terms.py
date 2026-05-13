@@ -1,3 +1,5 @@
+# Translated from ESIGMA_GO_Terms.c by Samanwaya Mukherjee, 2026
+
 import numpy as np
 from dataclasses import dataclass
 

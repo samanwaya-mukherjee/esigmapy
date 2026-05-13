@@ -1,4 +1,4 @@
-# Written by Samanwaya Mukherjee (2026)
+# Written by Samanwaya Mukherjee (2026), based on generator.py in esigmapy
 #
 """Functions specific to generating ESIGMA waveforms"""
 

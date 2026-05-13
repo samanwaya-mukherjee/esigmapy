@@ -3,6 +3,8 @@ esigma_pn_inspiral.py
 ====================
 Python translation of ESIGMA_PNInspiral.c
 
+Translated by Samanwaya Mukherjee, 2026
+
 References:
   - T. Damour, A. Gopakumar, and B. Iyer (PRD 70 064028), Eqs. 71a, 71b
   - K. G. Arun, Luc Blanchet, Bala R. Iyer and Siddharta Sinha, arXiv:0908.3854

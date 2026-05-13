@@ -1,3 +1,5 @@
+# Translated from LALSimESIGMA.c by Samanwaya Mukherjee, 2026
+
 import numpy as np
 from scipy.integrate import solve_ivp
 from scipy.interpolate import CubicSpline
