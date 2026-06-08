@@ -1313,7 +1313,7 @@ def e_dot_2_5pn_SO(e: float, m1: float, m2: float, S1z: float, S2z: float) -> fl
             + 21830032 * e_2 * e_fact_sqrt
             + 22413824 * e_4 * e_fact_sqrt
             + 1071519 * e_6 * e_fact_sqrt
-            - 896 * (1 - e) * (1 + e) * (2960 + 6927 * e_2 + 313 * e_4)
+            - 896 * (-1 + e) * (1 + e) * (2960 + 6927 * e_2 + 313 * e_4)
         )
     )
 
@@ -2303,7 +2303,7 @@ def phi_dot_3pn_SS(e: float, m1: float, m2: float, S1z: float, S2z: float, u: fl
         cosu3_m1_4_S1z2 + cosu3_m2_4_S2z2 + cosu3_m1_3_m2 + cosu3_m1_m2_3 + cosu3_m1_2_m2_2
     ) * cos_u_3
 
-    denominator = 12.0 * (e_2 - 1.0) ** 3 * M_fact_4 * (1.0 - e * cos_u) ** 5
+    denominator = 12.0 * (e_2 - 1.0) ** 3 * M_fact_4 * (-1.0 + e * cos_u) ** 5
 
     phi_3pn_SS = (term_const + term_cosu + term_cosu2 + term_cosu3) / denominator
 
