@@ -2930,7 +2930,7 @@ def pn_kepler_equation(eta, x, e, l):
 
 # ================== ODE system for eccentric models ==========================
 
-def eccentric_x_model_odes(t, y, params):
+def eccentric_x_model_odes(t, y, params, phidot_only=False):
     """
     ODE system for eccentric gravitational wave models.
     y = [x, e, l, phi]
@@ -2952,12 +2952,14 @@ def eccentric_x_model_odes(t, y, params):
     dydt = [0.0, 0.0, 0.0, 0.0]
 
     if abs(e) > 1e-12:
+        if phidot_only: return dphi_dt(u, eta, m1, m2, S1z, S2z, x, e)
         dydt[0] = dx_dt(radiation_pn_order, eta, m1, m2, S1z, S2z, x, e)
         dydt[1] = de_dt(radiation_pn_order, eta, m1, m2, S1z, S2z, x, e)
         dydt[2] = dl_dt(eta, m1, m2, S1z, S2z, x, e)
         dydt[3] = dphi_dt(u, eta, m1, m2, S1z, S2z, x, e)
     else:
         # zero eccentricity limit (arXiv:0909.0066)
+        if phidot_only: return x * np.sqrt(x)
         dydt[0] = dx_dt(radiation_pn_order, eta, m1, m2, S1z, S2z, x, e)
         dydt[1] = de_dt(radiation_pn_order, eta, m1, m2, S1z, S2z, x, e)
         dydt[2] = dl_dt(eta, m1, m2, S1z, S2z, x, e)

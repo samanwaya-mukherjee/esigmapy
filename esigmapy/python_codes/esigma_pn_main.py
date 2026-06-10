@@ -341,15 +341,15 @@ def inspiral_esigma_dynamics(
     t_max = MAX_SAMPLES * dt
     #-----------------------------------
     sol = solve_ivp(
-            rhs,
-            (0.0, t_max),   # large upper bound; event will stop earlier
-            y0,
-            method="LSODA",
-            rtol=ode_eps,
-            atol=1e-25,
-            max_step=dt,
-            events=isco_event,
-        )
+                        rhs,
+                        (0.0, t_max),   # large upper bound; event will stop earlier
+                        y0,
+                        method="RK45",
+                        rtol=ode_eps,
+                        atol=1e-17,
+                        # max_step=dt,
+                        events=isco_event,
+                    )
     t_arr = sol.t
     y_arr = sol.y.T   # shape (N, 4)
 
@@ -397,10 +397,17 @@ def inspiral_esigma_dynamics(
     def interp_deriv_uniform(t_raw, y_raw):
         cs = CubicSpline(t_raw, y_raw)
         return cs(uniform_t, 1)   # first derivative
+    
+    phi_dot_arr = np.array([
+                            eccentric_x_model_odes(t, y, params, phidot_only=True)
+                            for t, y in zip(t_arr, y_arr)
+                                ])
+
+    uniform_phi_dot = interp_uniform(t_arr, phi_dot_arr)
 
     uniform_x       = interp_uniform(t_arr, x_arr)
     uniform_phi     = interp_uniform(t_arr, phi_arr)
-    uniform_phi_dot = interp_deriv_uniform(t_arr, phi_arr)
+    # uniform_phi_dot = interp_deriv_uniform(t_arr, phi_arr)
     uniform_r       = interp_uniform(t_arr, r_arr)
     uniform_r_dot   = interp_deriv_uniform(t_arr, r_arr)
     uniform_e       = interp_uniform(t_arr, e_arr)
