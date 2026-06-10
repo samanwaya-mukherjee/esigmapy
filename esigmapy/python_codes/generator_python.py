@@ -191,6 +191,8 @@ def get_inspiral_esigma_modes_py(
     return_orbital_params=False,
     return_pycbc_timeseries=True,
     verbose=False,
+    solve_ivp_method='RK45',
+    abs_tol=1e-17,
 ):
     """
     Returns inspiral ESIGMA GW modes
@@ -276,6 +278,8 @@ def get_inspiral_esigma_modes_py(
         mean_anomaly,
         1e-12,
         1 / delta_t,
+        solve_ivp_method=solve_ivp_method,
+        abs_tol=abs_tol,
     )
 
     if f_ref < f_lower:

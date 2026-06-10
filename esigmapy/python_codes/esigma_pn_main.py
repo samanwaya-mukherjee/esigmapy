@@ -23,7 +23,7 @@ L_MIN = 2
 L_MAX = 4
 ONLY_LeqM_MODES = False
 ModePNOrderDefault = 8
-LAL_MRSUN_SI = 1.476625061404649e3   # solar mass in metres
+LAL_MRSUN_SI = lal.MRSUN_SI #1.476625061404649e3   # solar mass in metres
 
 from dataclasses import dataclass
 
@@ -266,6 +266,8 @@ def inspiral_esigma_dynamics(
     mean_anom_init, # initial mean anomaly
     ode_eps,        # tolerance (relative)
     sampling_rate,  # sample rate in Hz
+    abs_tol = 1e-17, # absolute tolerance
+    solve_ivp_method = "RK45", # method for solve_ivp module   
 ):
     """
     Compute ESIGMA orbital dynamics via ODE integration, then interpolate
@@ -344,9 +346,9 @@ def inspiral_esigma_dynamics(
                         rhs,
                         (0.0, t_max),   # large upper bound; event will stop earlier
                         y0,
-                        method="RK45",
+                        method=solve_ivp_method,
                         rtol=ode_eps,
-                        atol=1e-17,
+                        atol=abs_tol,
                         # max_step=dt,
                         events=isco_event,
                     )
