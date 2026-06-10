@@ -2703,7 +2703,7 @@ def dx_dt(radiation_pn_order: int,
             + x_dot_4pnSO(e, eta, m1, m2, S1z, S2z)
             + x_dot_4pnSS(e, eta, m1, m2, S1z, S2z)
         ) * (x2 * x2)
-        inst += x_dot_4pn_SF(e, eta, S1z) * (x2 * x2)
+        # inst += x_dot_4pn_SF(e, eta, S1z) * (x2 * x2)
 
     if radiation_pn_order >= 9:
         inst += x_dot_4_5_pn(e, eta, x) * (x2 * x2) * sqx
