@@ -1364,7 +1364,7 @@ def hGO_3_m_3(
         M_PI2 = M_PI ** 2
 
         spin_terms = (
-            504504 * total_mass3 *
+            1j * 504504 * total_mass3 *
             (2 * total_mass *
              (rDOT *
               (S1z * (108 - 498 * eta +
@@ -1551,7 +1551,7 @@ def hGO_3_m_3(
         )
 
         return (
-            1j * (spin_terms + orbital_terms + log_term)
+            (spin_terms + orbital_terms + log_term)
             / (2.4216192e7 * np.sqrt(210) * r4)
         )
 
@@ -2240,205 +2240,310 @@ def hGO_3_m_1(
         return term1 + term2
 
     elif vpnorder == 7:
-        M_PI2 = M_PI ** 2
-
-        spin_terms = (
-            1513512 * total_mass3 *
-            (2 * total_mass *
-             (PhiDOT * r *
-              (1j * (-97 + 631 * eta) * S1z +
-               5 * (8 + 16 * eta * (-7 + 15 * eta) +
-                    3 * kappa1 * (-39 + eta * (149 + 4 * eta))) * S1z2 +
-               S2z * (97j - 631j * eta -
-                      5 * (8 + 16 * eta * (-7 + 15 * eta) +
-                           3 * kappa2 * (-39 + eta * (149 + 4 * eta))) * S2z)) +
-              rDOT *
-              (2 * (-18 + 83 * eta) * S1z -
-               5j * (-4 * (6 + eta * (-25 + 7 * eta)) +
-                     kappa1 * (155 + eta * (-373 + 164 * eta))) * S1z2 +
-               S2z * (36 - 166 * eta +
-                      5j * (-4 * (6 + eta * (-25 + 7 * eta)) +
-                            kappa2 * (155 + eta * (-373 + 164 * eta))) * S2z))) +
-             r * (2 * rDOT3 *
-                  (S1z * (18 - 110 * eta -
-                          5j * (69 * kappa1 - 214 * kappa1 * eta +
-                                4 * (5 + 4 * kappa1) * eta2) * S1z) +
-                   2 * (-9 + 55 * eta) * S2z +
-                   5j * (69 * kappa2 - 214 * kappa2 * eta +
-                         4 * (5 + 4 * kappa2) * eta2) * S2z2) +
-                  PhiDOT3 * r3 *
-                  (S1z * (255j - 1403j * eta +
-                          10 * (28 * (3 - 8 * eta) * eta +
-                                kappa1 * (51 + 2 * eta * (-91 + 118 * eta))) * S1z) +
-                   1j * (-255 + 1403 * eta) * S2z -
-                   10 * (28 * (3 - 8 * eta) * eta +
-                         kappa2 * (51 + 2 * eta * (-91 + 118 * eta))) * S2z2) +
-                  2 * PhiDOT2 * r2 * rDOT *
-                  (S1z * (255 - 1079 * eta +
-                          5j * (2 * (60 - 361 * eta) * eta +
-                                kappa1 * (6 + eta * (-47 + 164 * eta))) * S1z) +
-                   (-255 + 1079 * eta) * S2z -
-                   5j * (2 * (60 - 361 * eta) * eta +
-                         kappa2 * (6 + eta * (-47 + 164 * eta))) * S2z2) +
-                  PhiDOT * r * rDOT2 *
-                  (4j * (-114 + 781 * eta) * S1z +
-                   5 * (-213 * kappa1 - 72 * eta + 278 * kappa1 * eta +
-                        8 * (7 + 44 * kappa1) * eta2) * S1z2 +
-                   S2z * (456j + 1065 * kappa2 * S2z +
-                          2 * eta * (-1562j - 5 * (-36 + 139 * kappa2 +
-                                                   4 * (7 + 44 * kappa2) * eta) * S2z)))))
-        )
-
-        orbital_terms = (
-            delta *
-            (52920 * (-4083 + eta * (58311 + eta * (-269240 + 405617 * eta))) *
-             r4 * combination_b4 * combination_a5 +
-             840 * total_mass2 * r2 *
-             ((-2555489 + 7 * eta * (820078 + eta * (-6623390 + 4948497 * eta))) *
-              PhiDOT5 * r5 +
-              1j * (3537631 + 7 * eta * (-2817653 + eta * (-7052042 + 4017147 * eta))) *
-              PhiDOT4 * r4 * rDOT +
-              3 * (-1428997 + 7 * eta * (-1230747 + eta * (-237418 + 4061717 * eta))) *
-              PhiDOT3 * r3 * rDOT2 +
-              1j * (-5153011 + 7 * eta * (-2375327 + 9 * eta * (218846 + 1640185 * eta))) *
-              PhiDOT2 * r2 * rDOT3 +
-              (-7761899 + 7 * eta * (2892563 + 5998602 * eta + 7493619 * eta2)) *
-              PhiDOT * r * rDOT4 +
-              3j * (-2422057 + 7 * eta * (501045 + eta * (2033141 + 2771816 * eta))) *
-              rDOT5) -
-             8820 * total_mass * r3 *
-             (2 * (111737 + eta * (-366573 + eta * (-618923 + 2278593 * eta))) *
-              PhiDOT7 * r7 +
-              2j * (101844 + eta * (-273675 - 871630 * eta + 2069774 * eta2)) *
-              PhiDOT6 * r6 * rDOT +
-              2 * (341322 + eta * (-1429938 + eta * (-1206083 + 7690681 * eta))) *
-              PhiDOT5 * r5 * rDOT2 +
-              8j * (90241 + 2 * eta * (-206022 + eta * (-62113 + 1003558 * eta))) *
-              PhiDOT4 * r4 * rDOT3 +
-              2 * (410547 + eta * (-2269686 + eta * (762091 + 8400052 * eta))) *
-              PhiDOT3 * r3 * rDOT4 +
-              4j * (217935 + 2 * eta * (-573699 + 5 * eta * (18671 + 445748 * eta))) *
-              PhiDOT2 * r2 * rDOT5 +
-              (333969 + 2 * eta * (-981471 + 4 * eta * (154039 + 750016 * eta))) *
-              PhiDOT * r * rDOT6 +
-              24j * (13245 + 2 * eta * (-37005 + eta * (14251 + 130160 * eta))) *
-              rDOT7) +
-             2 * total_mass4 *
-             (-4178597424j * rDOT +
-              84j * rDOT *
-              (38468500 * eta3 +
-               648648j * (S1z + S2z) -
-               90090 * ((-24 + 155 * kappa1) * S1z2 +
-                        (-24 + 155 * kappa2) * S2z2) -
-               420 * eta2 *
-               (-122855 +
-                3003 * ((2 + 11 * kappa1) * S1z2 -
-                        18 * S1z * S2z +
-                        (2 + 11 * kappa2) * S2z2)) +
-               3 * eta *
-               (-103100846 - 1846845 * M_PI2 -
-                564564j * S2z +
-                6006 * (S1z * (-94j + 5 * (-52 + 63 * kappa1) * S1z) -
-                        20 * S1z * S2z +
-                        5 * (-52 + 63 * kappa2) * S2z2))) +
-              PhiDOT * r *
-              (1176172480 * eta3 +
-               8 * (74084729 -
-                    189189 * S1z * (97j + 5 * (-8 + 117 * kappa1) * S1z) -
-                    189189 * S2z * (97j + 5 * (-8 + 117 * kappa2) * S2z)) -
-               176400 * eta2 *
-               (11251 +
-                429 * ((2 + 13 * kappa1) * S1z2 -
-                       22 * S1z * S2z +
-                       (2 + 13 * kappa2) * S2z2)) +
-               147 * eta *
-               (-65012788 + 4485195 * M_PI2 +
-                4499352j * S2z +
-                10296 * (S1z * (437j + 15 * (-32 + 71 * kappa1) * S1z) -
-                         3860 * S1z * S2z +
-                         15 * (-32 + 71 * kappa2) * S2z2)))) -
-             3 * total_mass3 * r *
-             (-4j * rDOT3 *
-              (601018232 - 1359334480 * eta3 -
-               756756 * S1z * (6j + 115 * kappa1 * S1z) -
-               756756 * S2z * (6j + 115 * kappa2 * S2z) +
-               231 * eta *
-               (8490448 + 503685 * M_PI2 +
-                80808j * S2z +
-                2184 * (S1z * (37j + 190 * kappa1 * S1z) +
-                        70 * S1z * S2z +
-                        190 * kappa2 * S2z2)) +
-               58800 * eta2 *
-               (-62596 +
-                429 * ((-1 + 5 * kappa1) * S1z2 -
-                       12 * S1z * S2z +
-                       (-1 + 5 * kappa2) * S2z2))) -
-              14j * PhiDOT2 * r2 * rDOT *
-              (-229522160 * eta3 +
-               8 * (48303859 +
-                    135135 * S1z * (-17j + 2 * kappa1 * S1z) +
-                    135135 * S2z * (-17j + 2 * kappa2 * S2z)) +
-               2520 * eta2 *
-               (100913 +
-                286 * ((-31 + 5 * kappa1) * S1z2 -
-                       72 * S1z * S2z +
-                       (-31 + 5 * kappa2) * S2z2)) +
-               7 * eta *
-               (125038052 + 2374515 * M_PI2 +
-                5858424j * S2z -
-                10296 * (S1z * (-569j + 25 * (-24 + 7 * kappa1) * S1z) +
-                         700 * S1z * S2z +
-                         25 * (-24 + 7 * kappa2) * S2z2))) +
-              4 * PhiDOT * r * rDOT2 *
-              (-1095987374 + 1035895280 * eta3 +
-               378378 * S1z * (152j + 355 * kappa1 * S1z) +
-               378378 * S2z * (152j + 355 * kappa2 * S2z) -
-               490 * eta2 *
-               (-5802767 +
-                5148 * ((2 + 23 * kappa1) * S1z2 -
-                        42 * S1z * S2z +
-                        (2 + 23 * kappa2) * S2z2)) -
-               77 * eta *
-               (42451610 + 1511055 * M_PI2 +
-                3623256j * S2z -
-                6552 * (S1z * (-553j + 5 * (18 + 37 * kappa1) * S1z) +
-                        965 * S1z * S2z +
-                        5 * (18 + 37 * kappa2) * S2z2))) +
-              7 * PhiDOT3 * r3 *
-              (512893080 * eta3 -
-               136 * (-2089567 +
-                      135135 * S1z * (1j + 2 * kappa1 * S1z) +
-                      135135 * S2z * (1j + 2 * kappa2 * S2z)) -
-               560 * eta2 *
-               (2457671 +
-                2574 * ((11 + 53 * kappa1) * S1z2 -
-                        84 * S1z * S2z +
-                        (11 + 53 * kappa2) * S2z2)) +
-               3 * eta *
-               (16621605 * M_PI2 +
-                8 * (27468722 +
-                     2681679j * S2z +
-                     3003 * (S1z * (893j - 840 * S1z + 800 * kappa1 * S1z) -
-                             3160 * S1z * S2z +
-                             40 * (-21 + 20 * kappa2) * S2z2))))))
-        )
-
-        log_term = (
-            74954880 * delta * total_mass3 *
-            (total_mass * (-22j * PhiDOT * r - 24 * rDOT) +
-             3 * r *
-             (7j * PhiDOT3 * r3 +
-              14 * PhiDOT2 * r2 * rDOT -
-              8j * PhiDOT * r * rDOT2 +
-              4 * rDOT3)) *
-            np.log(r / r0)
-        )
-
-        return (
-            1j * (spin_terms + orbital_terms + log_term)
-            / (3.6324288e8 * np.sqrt(14) * r4)
-        )
-
+        # M_PI2 = M_PI*M_PI
+         # /* Henry et al. ecc + spin terms */
+        Numerator_7 =  (((1j * 1) *
+                        (1513512 * total_mass3 *
+                            (2 * total_mass *
+                            (PhiDOT * r *
+                                 ((1j * 1) * (-97 + 631 * eta) * S1z +
+                                  5 *
+                                      (8 + 16 * eta * (-7 + 15 * eta) +
+                                       3 * kappa1 *
+                                           (-39 + eta * (149 + 4 * eta))) *
+                                      S1z2 +
+                                  S2z * ((1j * 97) - (1j * 631) * eta -
+                                         5 *
+                                             (8 + 16 * eta * (-7 + 15 * eta) +
+                                              3 * kappa2 *
+                                                  (-39 + eta * (149 + 4 * eta))) *
+                                             S2z)) +
+                             rDOT *
+                                 (2 * (-18 + 83 * eta) * S1z -
+                                  (1j * 5) *
+                                      (-4 * (6 + eta * (-25 + 7 * eta)) +
+                                       kappa1 *
+                                           (155 + eta * (-373 + 164 * eta))) *
+                                      S1z2 +
+                                  S2z *
+                                      (36 - 166 * eta +
+                                       (1j * 5) *
+                                           (-4 * (6 + eta * (-25 + 7 * eta)) +
+                                            kappa2 * (155 +
+                                                      eta * (-373 + 164 * eta))) *
+                                           S2z))) +
+                        r * (2 * rDOT3 *
+                                 (S1z * (18 - 110 * eta -
+                                         (1j * 5) *
+                                             (69 * kappa1 - 214 * kappa1 * eta +
+                                              4 * (5 + 4 * kappa1) *
+                                                  eta2) *
+                                             S1z) +
+                                  2 * (-9 + 55 * eta) * S2z +
+                                  (1j * 5) *
+                                      (69 * kappa2 - 214 * kappa2 * eta +
+                                       4 * (5 + 4 * kappa2) * eta2) *
+                                      S2z2) +
+                             PhiDOT3 * r3 *
+                                 (S1z *
+                                      ((1j * 255) - (1j * 1403) * eta +
+                                       10 *
+                                           (28 * (3 - 8 * eta) * eta +
+                                            kappa1 *
+                                                (51 +
+                                                 2 * eta * (-91 + 118 * eta))) *
+                                           S1z) +
+                                  (1j * 1) * (-255 + 1403 * eta) * S2z -
+                                  10 *
+                                      (28 * (3 - 8 * eta) * eta +
+                                       kappa2 *
+                                           (51 + 2 * eta * (-91 + 118 * eta))) *
+                                      S2z2) +
+                             2 * PhiDOT2 * r2 * rDOT *
+                                 (S1z * (255 - 1079 * eta +
+                                         (1j * 5) *
+                                             (2 * (60 - 361 * eta) * eta +
+                                              kappa1 *
+                                                  (6 + eta * (-47 + 164 * eta))) *
+                                             S1z) +
+                                  (-255 + 1079 * eta) * S2z -
+                                  (1j * 5) *
+                                      (2 * (60 - 361 * eta) * eta +
+                                       kappa2 * (6 + eta * (-47 + 164 * eta))) *
+                                      S2z2) +
+                             PhiDOT * r * rDOT2 *
+                                 ((1j * 4) * (-114 + 781 * eta) * S1z +
+                                  5 *
+                                      (-213 * kappa1 - 72 * eta +
+                                       278 * kappa1 * eta +
+                                       8 * (7 + 44 * kappa1) * eta2) *
+                                      S1z2 +
+                                  S2z *
+                                      ((1j * 456) + 1065 * kappa2 * S2z +
+                                       2 * eta *
+                                           ((1j * -1562) - 5 *
+                                                                    (-36 +
+                                                                     139 *
+                                                                         kappa2 +
+                                                                     4 * (7 + 44 * kappa2) *
+                                                                         eta) *
+                                                                    S2z))))) +
+                   delta *
+                       (52920 *
+                            (-4083 +
+                             eta * (58311 + eta * (-269240 + 405617 * eta))) *
+                            r4 * combination_b4 * combination_a5 +
+                        840 * total_mass2 * r2 *
+                            ((-2555489 +
+                              7 * eta *
+                                  (820078 + eta * (-6623390 + 4948497 * eta))) *
+                                 PhiDOT5 * r5 +
+                             (1j * 1) *
+                                 (3537631 +
+                                  7 * eta *
+                                      (-2817653 +
+                                       eta * (-7052042 + 4017147 * eta))) *
+                                 PhiDOT4 * r4 * rDOT +
+                             3 * (-1428997 + 7 * eta * (-1230747 + eta * (-237418 + 4061717 * eta))) *
+                                 PhiDOT3 * r3 * rDOT2 +
+                             (1j * 1) *
+                                 (-5153011 +
+                                  7 * eta *
+                                      (-2375327 +
+                                       9 * eta * (218846 + 1640185 * eta))) *
+                                 PhiDOT2 * r2 * rDOT3 +
+                             (-7761899 + 7 * eta *
+                                             (2892563 + 5998602 * eta +
+                                              7493619 * eta2)) *
+                                 PhiDOT * r * rDOT4 +
+                             (1j * 3) *
+                                 (-2422057 +
+                                  7 * eta *
+                                      (501045 +
+                                       eta * (2033141 + 2771816 * eta))) *
+                                 rDOT5) -
+                        8820 * total_mass * r3 *
+                            (2 *
+                                 (111737 +
+                                  eta * (-366573 +
+                                        eta * (-618923 + 2278593 * eta))) *
+                                 PhiDOT7 * r7 +
+                             (1j * 2) *
+                                 (101844 + eta * (-273675 - 871630 * eta +
+                                                 2069774 * eta2)) *
+                                 PhiDOT6 * r6 * rDOT +
+                             2 * (341322 + eta * (-1429938 + eta * (-1206083 + 7690681 * eta))) *
+                                 PhiDOT5 * r5 * rDOT2 +
+                             (1j * 8) *
+                                 (90241 + 2 * eta *
+                                              (-206022 +
+                                               eta * (-62113 + 1003558 * eta))) *
+                                 PhiDOT4 * r4 * rDOT3 +
+                             2 * (410547 + eta * (-2269686 + eta * (762091 + 8400052 * eta))) *
+                                 PhiDOT3 * r3 * rDOT4 +
+                             (1j * 4) *
+                                 (217935 +
+                                  2 * eta *
+                                      (-573699 +
+                                       5 * eta * (18671 + 445748 * eta))) *
+                                 PhiDOT2 * r2 * rDOT5 +
+                             (333969 +
+                              2 * eta *
+                                  (-981471 + 4 * eta * (154039 + 750016 * eta))) *
+                                 PhiDOT * r * rDOT6 +
+                             (1j * 24) *
+                                 (13245 +
+                                  2 * eta *
+                                      (-37005 + eta * (14251 + 130160 * eta))) *
+                                 rDOT7) +
+                        2 * total_mass4 *
+                            ((1j * -4178597424) * rDOT +
+                             (1j * 84) * rDOT *
+                                 (38468500 * eta3 +
+                                  (1j * 648648) * (S1z + S2z) -
+                                  90090 * ((-24 + 155 * kappa1) * S1z2 +
+                                           (-24 + 155 * kappa2) * S2z2) -
+                                  420 * eta2 *
+                                      (-122855 +
+                                       3003 *
+                                           ((2 + 11 * kappa1) * S1z2 -
+                                            18 * S1z * S2z +
+                                            (2 + 11 * kappa2) * S2z2)) +
+                                  3 * eta *
+                                      (-103100846 - 1846845 * M_PI2 -
+                                       (1j * 564564) * S2z +
+                                       6006 * (S1z * ((1j * -94) +
+                                                      5 * (-52 + 63 * kappa1) *
+                                                          S1z) -
+                                               20 * S1z * S2z +
+                                               5 * (-52 + 63 * kappa2) *
+                                                   S2z2))) +
+                             PhiDOT * r *
+                                 (1176172480 * eta3 +
+                                  8 * (74084729 -
+                                       189189 * S1z *
+                                           ((1j * 97) +
+                                            5 * (-8 + 117 * kappa1) * S1z) -
+                                       189189 * S2z *
+                                           ((1j * 97) +
+                                            5 * (-8 + 117 * kappa2) * S2z)) -
+                                  176400 * eta2 *
+                                      (11251 +
+                                       429 *
+                                           ((2 + 13 * kappa1) * S1z2 -
+                                            22 * S1z * S2z +
+                                            (2 + 13 * kappa2) * S2z2)) +
+                                  147 * eta *
+                                      (-65012788 + 4485195 * M_PI2 +
+                                       (1j * 4499352) * S2z +
+                                       10296 *
+                                           (S1z * ((1j * 437) +
+                                                   15 * (-32 + 71 * kappa1) *
+                                                       S1z) -
+                                            3860 * S1z * S2z +
+                                            15 * (-32 + 71 * kappa2) *
+                                                S2z2)))) -
+                        3 * total_mass3 * r *
+                            ((1j * -4) * rDOT3 *
+                                 (601018232 - 1359334480 * eta3 -
+                                  756756 * S1z *
+                                      ((1j * 6) + 115 * kappa1 * S1z) -
+                                  756756 * S2z *
+                                      ((1j * 6) + 115 * kappa2 * S2z) +
+                                  231 * eta *
+                                      (8490448 + 503685 * M_PI2 +
+                                       (1j * 80808) * S2z +
+                                       2184 * (S1z * ((1j * 37) +
+                                                      190 * kappa1 * S1z) +
+                                               70 * S1z * S2z +
+                                               190 * kappa2 * S2z2)) +
+                                  58800 * eta2 *
+                                      (-62596 +
+                                       429 *
+                                           ((-1 + 5 * kappa1) * S1z2 -
+                                            12 * S1z * S2z +
+                                            (-1 + 5 * kappa2) * S2z2))) -
+                             (1j * 14) * PhiDOT2 * r2 *
+                                 rDOT *
+                                 (-229522160 * eta3 +
+                                  8 * (48303859 +
+                                       135135 * S1z *
+                                           ((1j * -17) +
+                                            2 * kappa1 * S1z) +
+                                       135135 * S2z *
+                                           ((1j * -17) +
+                                            2 * kappa2 * S2z)) +
+                                  2520 * eta2 *
+                                      (100913 +
+                                       286 *
+                                           ((-31 + 5 * kappa1) * S1z2 -
+                                            72 * S1z * S2z +
+                                            (-31 + 5 * kappa2) * S2z2)) +
+                                  7 * eta *
+                                      (125038052 + 2374515 * M_PI2 +
+                                       (1j * 5858424) * S2z -
+                                       10296 * (S1z * ((1j * -569) +
+                                                       25 * (-24 + 7 * kappa1) *
+                                                           S1z) +
+                                                700 * S1z * S2z +
+                                                25 * (-24 + 7 * kappa2) *
+                                                    S2z2))) +
+                             4 * PhiDOT * r * rDOT2 *
+                                 (-1095987374 + 1035895280 * eta3 +
+                                  378378 * S1z *
+                                      ((1j * 152) + 355 * kappa1 * S1z) +
+                                  378378 * S2z *
+                                      ((1j * 152) + 355 * kappa2 * S2z) -
+                                  490 * eta2 *
+                                      (-5802767 +
+                                       5148 *
+                                           ((2 + 23 * kappa1) * S1z2 -
+                                            42 * S1z * S2z +
+                                            (2 + 23 * kappa2) * S2z2)) -
+                                  77 * eta *
+                                      (42451610 + 1511055 * M_PI2 +
+                                       (1j * 3623256) * S2z -
+                                       6552 * (S1z * ((1j * -553) +
+                                                      5 * (18 + 37 * kappa1) *
+                                                          S1z) +
+                                               965 * S1z * S2z +
+                                               5 * (18 + 37 * kappa2) *
+                                                   S2z2))) +
+                             7 * PhiDOT3 * r3 *
+                                 (512893080 * eta3 -
+                                  136 *
+                                      (-2089567 +
+                                       135135 * S1z *
+                                           ((1j * 1) + 2 * kappa1 * S1z) +
+                                       135135 * S2z *
+                                           ((1j * 1) + 2 * kappa2 * S2z)) -
+                                  560 * eta2 *
+                                      (2457671 +
+                                       2574 *
+                                           ((11 + 53 * kappa1) * S1z2 -
+                                            84 * S1z * S2z +
+                                            (11 + 53 * kappa2) * S2z2)) +
+                                  3 * eta *
+                                      (16621605 * M_PI2 +
+                                       8 * (27468722 +
+                                            (1j * 2681679) * S2z +
+                                            3003 * (S1z * ((1j * 893) -
+                                                           840 * S1z +
+                                                           800 * kappa1 * S1z) -
+                                                    3160 * S1z * S2z +
+                                                    40 * (-21 + 20 * kappa2) *
+                                                        S2z2))))))) +
+              74954880 * delta * total_mass3 *
+                  (total_mass * ((1j * -22) * PhiDOT * r - 24 * rDOT) +
+                   3 * r *
+                       ((1j * 7) * PhiDOT3 * r3 +
+                        14 * PhiDOT2 * r2 * rDOT -
+                        (1j * 8) * PhiDOT * r * rDOT2 +
+                        4 * rDOT3)) *
+                  np.log(r / r0))
+             )
+        return Numerator_7/(3.6324288e8 * np.sqrt(14) *
+              r4)
     else:
         return complex(0, 0)
 
@@ -2486,44 +2591,55 @@ def hQC_3_m_1(
         )
 
     elif vpnorder == 7:
-        numerator_7 = (
-            -9.44822373393802e-6 * (
-                x4p5 * (
-                    53132.0j * delta - 92232.0j * delta * EulerGamma + 35280.0j * delta * EulerGamma**2 -
-                    46116.0 * delta * M_PI + 35280.0 * delta * EulerGamma * M_PI - 2940.0j * delta * M_PI2 +
-                    57036.0 * S1z + 57036.0 * delta * S1z - 35280.0 * EulerGamma * S1z - 35280.0 * delta * EulerGamma * S1z -
-                    114513.0 * eta * S1z - 143031.0 * delta * eta * S1z + 97020.0 * EulerGamma * eta * S1z +
-                    114660.0 * delta * EulerGamma * eta * S1z + 17640.0j * M_PI * S1z + 17640.0j * delta * M_PI * S1z -
-                    48510.0j * eta * M_PI * S1z - 57330.0j * delta * eta * M_PI * S1z - 57036.0 * S2z +
-                    57036.0 * delta * S2z + 35280.0 * EulerGamma * S2z - 35280.0 * delta * EulerGamma * S2z +
-                    114513.0 * eta * S2z - 143031.0 * delta * eta * S2z - 97020.0 * EulerGamma * eta * S2z +
-                    114660.0 * delta * EulerGamma * eta * S2z - 17640.0j * M_PI * S2z + 17640.0j * delta * M_PI * S2z +
-                    48510.0j * eta * M_PI * S2z - 57330.0j * delta * eta * M_PI * S2z - 92232.0j * delta * LOG2 +
-                    70560.0j * delta * EulerGamma * LOG2 + 35280.0 * delta * M_PI * LOG2 -
-                    35280.0 * S1z * LOG2 - 35280.0 * delta * S1z * LOG2 + 97020.0 * eta * S1z * LOG2 +
-                    114660.0 * delta * eta * S1z * LOG2 + 35280.0 * S2z * LOG2 - 35280.0 * delta * S2z * LOG2 -
-                    97020.0 * eta * S2z * LOG2 + 114660.0 * delta * eta * S2z * LOG2 +
-                    35280.0j * delta * LOG2**2 - 2490264.0j * delta * LOG3 +
-                    1905120.0j * delta * EulerGamma * LOG3 + 952560.0 * delta * M_PI * LOG3 -
-                    317520.0 * S1z * LOG3 - 317520.0 * delta * S1z * LOG3 + 1508220.0 * eta * S1z * LOG3 +
-                    396900.0 * delta * eta * S1z * LOG3 + 317520.0 * S2z * LOG3 - 317520.0 * delta * S2z * LOG3 -
-                    1508220.0 * eta * S2z * LOG3 + 396900.0 * delta * eta * S2z * LOG3 +
-                    1905120.0j * delta * LOG2 * LOG3 + 952560.0j * delta * LOG3**2 +
-                    35280.0j * delta * logb0**2 + 21840.0j * delta * logr0 - 138348.0j * delta * logx +
-                    105840.0j * delta * EulerGamma * logx + 52920.0 * delta * M_PI * logx - 52920.0 * S1z * logx -
-                    52920.0 * delta * S1z * logx + 145530.0 * eta * S1z * logx + 171990.0 * delta * eta * S1z * logx +
-                    52920.0 * S2z * logx - 52920.0 * delta * S2z * logx - 145530.0 * eta * S2z * logx +
-                    171990.0 * delta * eta * S2z * logx + 105840.0j * delta * LOG2 * logx +
-                    79380.0j * delta * logx**2 +
-                    588.0 * logb0 * (
-                        -194.0j * delta + 120.0j * delta * EulerGamma + 60.0 * delta * M_PI +
-                        15.0 * (-4.0 - 4.0 * delta + 11.0 * eta + 13.0 * delta * eta) * S1z +
-                        60.0 * S2z - 60.0 * delta * S2z - 165.0 * eta * S2z + 195.0 * delta * eta * S2z +
-                        120.0j * delta * LOG2 + 180.0j * delta * logx
-                    )
-                )
-            )
-        )
+        numerator_7 = -9.44822373393802e-6 * (
+        x4p5 *
+         ((1j * 53132) * delta - (1j * 92232) * delta * EulerGamma +
+          (1j * 35280) * delta * EulerGamma * EulerGamma -
+          46116 * delta * M_PI + 35280 * delta * EulerGamma * M_PI -
+          (1j * 2940) * delta * M_PI2 + 57036 * S1z + 57036 * delta * S1z -
+          35280 * EulerGamma * S1z - 35280 * delta * EulerGamma * S1z -
+          114513 * eta * S1z - 143031 * delta * eta * S1z +
+          97020 * EulerGamma * eta * S1z +
+          114660 * delta * EulerGamma * eta * S1z +
+          (1j * 17640) * M_PI * S1z +
+          (1j * 17640) * delta * M_PI * S1z -
+          (1j * 48510) * eta * M_PI * S1z -
+          (1j * 57330) * delta * eta * M_PI * S1z - 57036 * S2z +
+          57036 * delta * S2z + 35280 * EulerGamma * S2z -
+          35280 * delta * EulerGamma * S2z + 114513 * eta * S2z -
+          143031 * delta * eta * S2z - 97020 * EulerGamma * eta * S2z +
+          114660 * delta * EulerGamma * eta * S2z -
+          (1j * 17640) * M_PI * S2z +
+          (1j * 17640) * delta * M_PI * S2z +
+          (1j * 48510) * eta * M_PI * S2z -
+          (1j * 57330) * delta * eta * M_PI * S2z -
+          (1j * 92232) * delta * LOG2 +
+          (1j * 70560) * delta * EulerGamma * LOG2 +
+          35280 * delta * M_PI * LOG2 - 35280 * S1z * LOG2 -
+          35280 * delta * S1z * LOG2 + 97020 * eta * S1z * LOG2 +
+          114660 * delta * eta * S1z * LOG2 + 35280 * S2z * LOG2 -
+          35280 * delta * S2z * LOG2 - 97020 * eta * S2z * LOG2 +
+          114660 * delta * eta * S2z * LOG2 +
+          (1j * 35280) * delta * LOG2 * LOG2 +
+          (1j * 35280) * delta * logb0 * logb0 +
+          (1j * 21840) * delta * logr0 -
+          (1j * 138348) * delta * logx +
+          (1j * 105840) * delta * EulerGamma * logx +
+          52920 * delta * M_PI * logx - 52920 * S1z * logx -
+          52920 * delta * S1z * logx + 145530 * eta * S1z * logx +
+          171990 * delta * eta * S1z * logx + 52920 * S2z * logx -
+          52920 * delta * S2z * logx - 145530 * eta * S2z * logx +
+          171990 * delta * eta * S2z * logx +
+          (1j * 105840) * delta * LOG2 * logx +
+          (1j * 79380) * delta * logx * logx +
+          588 * logb0 *
+              ((1j * -194) * delta + (1j * 120) * delta * EulerGamma +
+               60 * delta * M_PI +
+               15 * (-4 - 4 * delta + 11 * eta + 13 * delta * eta) * S1z +
+               60 * S2z - 60 * delta * S2z - 165 * eta * S2z +
+               195 * delta * eta * S2z + (1j * 120) * delta * LOG2 +
+               (1j * 180) * delta * logx)))
+        
         return numerator_7 / np.sqrt(14.0)
 
     else:
