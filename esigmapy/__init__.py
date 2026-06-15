@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 from . import blend, generator, mr_generator, legacy, utils
 from .generator import *
-
+from .python_codes import *
 
 def get_version_information():
     import os
