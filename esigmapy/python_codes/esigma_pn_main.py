@@ -13,14 +13,18 @@ LAL_PI = lal.PI
 LAL_MTSUN_SI = lal.MTSUN_SI #4.925491025543576e-6, Solar mass in seconds
 LAL_MRSUN_SI = lal.MRSUN_SI #1.476625061404649e3   # solar mass in metres
 
+RadiationPNOrderDefault = 8  # Default radiation reaction PN order (3PN)
+
+import os
+
 # from dataclasses import dataclass, field
 
 # ------------------------------------------------------------------ #
 # Constants / defaults (set these to match your C macros)
 # ------------------------------------------------------------------ #
 
-
 from dataclasses import dataclass
+
 
 @dataclass
 class Params:
@@ -31,24 +35,25 @@ class Params:
     S1z: float
     S2z: float
 
+
 # ------------------------------------------------------------------ #
 # compute_mode_from_dynamics
 # ------------------------------------------------------------------ #
 def compute_mode_from_dynamics(
     l: int,
     m: int,
-    x_vec:       np.ndarray,   # PN expansion parameter (length N)
-    phi_vec:     np.ndarray,   # orbital phase
-    phi_dot_vec: np.ndarray,   # d(phi)/dt
-    r_vec:       np.ndarray,   # orbital separation
-    r_dot_vec:   np.ndarray,   # d(r)/dt
-    mass1:  float,
-    mass2:  float,
-    S1z:    float,
-    S2z:    float,
-    R:      float,             # source distance (m)
+    x_vec: np.ndarray,  # PN expansion parameter (length N)
+    phi_vec: np.ndarray,  # orbital phase
+    phi_dot_vec: np.ndarray,  # d(phi)/dt
+    r_vec: np.ndarray,  # orbital separation
+    r_dot_vec: np.ndarray,  # d(r)/dt
+    mass1: float,
+    mass2: float,
+    S1z: float,
+    S2z: float,
+    R: float,  # source distance (m)
     vpnorder: int,
-) -> np.ndarray:               # complex128, length N
+) -> np.ndarray:  # complex128, length N
     """
     Compute the (l, m) spin-weighted spherical harmonic mode h_lm
     at every time step from the orbital dynamics arrays.
@@ -56,12 +61,12 @@ def compute_mode_from_dynamics(
     Mirrors the static C function compute_mode_from_dynamics().
     """
     total_mass = mass1 + mass2
-    eta        = (mass1 * mass2) / total_mass**2
+    eta = (mass1 * mass2) / total_mass**2
 
     # kv = _build_kepler_vars(eta, total_mass, S1z, S2z)
 
-    length  = len(x_vec)
-    h_lm    = np.zeros(length, dtype=complex)
+    length = len(x_vec)
+    h_lm = np.zeros(length, dtype=complex)
 
     for i in range(length):
         # populate_kepler_params(
@@ -74,12 +79,18 @@ def compute_mode_from_dynamics(
         # )
         h_lm[i] = (
             hlmGOresult(
-                l, m, total_mass, eta,
+                l,
+                m,
+                total_mass,
+                eta,
                 r_vec[i] * total_mass,
                 r_dot_vec[i],
                 phi_vec[i],
                 phi_dot_vec[i] / total_mass,
-                R, vpnorder, S1z, S2z,
+                R,
+                vpnorder,
+                S1z,
+                S2z,
                 x_vec[i],
             )
             * LAL_MRSUN_SI
@@ -92,15 +103,15 @@ def compute_mode_from_dynamics(
 # compute_strain_from_dynamics
 # ------------------------------------------------------------------ #
 def compute_strain_from_dynamics(
-    x_vec:       np.ndarray,
-    phi_vec:     np.ndarray,
+    x_vec: np.ndarray,
+    phi_vec: np.ndarray,
     phi_dot_vec: np.ndarray,
-    r_vec:       np.ndarray,
-    r_dot_vec:   np.ndarray,
-    mass1:  float,
-    mass2:  float,
-    S1z:    float,
-    S2z:    float,
+    r_vec: np.ndarray,
+    r_dot_vec: np.ndarray,
+    mass1: float,
+    mass2: float,
+    S1z: float,
+    S2z: float,
     euler_iota: float,
     euler_beta: float,
     R:          float,
@@ -115,8 +126,8 @@ def compute_strain_from_dynamics(
 
     Mirrors the static C function compute_strain_from_dynamics().
     """
-    length  = len(x_vec)
-    h_plus  = np.zeros(length, dtype=float)
+    length = len(x_vec)
+    h_plus = np.zeros(length, dtype=float)
     h_cross = np.zeros(length, dtype=float)
 
     for ell in range(L_MIN, L_MAX + 1):
@@ -126,17 +137,25 @@ def compute_strain_from_dynamics(
                 continue
 
             hlm = compute_mode_from_dynamics(
-                ell, em,
-                x_vec, phi_vec, phi_dot_vec, r_vec, r_dot_vec,
-                mass1, mass2, S1z, S2z, R, vpnorder,
+                ell,
+                em,
+                x_vec,
+                phi_vec,
+                phi_dot_vec,
+                r_vec,
+                r_dot_vec,
+                mass1,
+                mass2,
+                S1z,
+                S2z,
+                R,
+                vpnorder,
             )
 
-            ylm = lal.SpinWeightedSphericalHarmonic(
-                euler_iota, euler_beta, -2, ell, em
-            )
+            ylm = lal.SpinWeightedSphericalHarmonic(euler_iota, euler_beta, -2, ell, em)
 
             hlm_times_ylm = hlm * ylm
-            h_plus  += hlm_times_ylm.real
+            h_plus += hlm_times_ylm.real
             h_cross -= hlm_times_ylm.imag
 
     return h_plus, h_cross
@@ -148,12 +167,12 @@ def compute_strain_from_dynamics(
 def inspiral_esigma_mode_from_dynamics(
     l: int,
     m: int,
-    t_vector:       np.ndarray,
-    x_vector:       np.ndarray,
-    phi_vector:     np.ndarray,
+    t_vector: np.ndarray,
+    x_vector: np.ndarray,
+    phi_vector: np.ndarray,
     phi_dot_vector: np.ndarray,
-    r_vector:       np.ndarray,
-    r_dot_vector:   np.ndarray,
+    r_vector: np.ndarray,
+    r_dot_vector: np.ndarray,
     mass1: float,
     mass2: float,
     S1z:   float,
@@ -169,10 +188,19 @@ def inspiral_esigma_mode_from_dynamics(
     scaling inside compute_mode_from_dynamics (matches the C end result).
     """
     return compute_mode_from_dynamics(
-        l, m,
-        x_vector, phi_vector, phi_dot_vector,
-        r_vector, r_dot_vector,
-        mass1, mass2, S1z, S2z, R, mode_pn_order, 
+        l,
+        m,
+        x_vector,
+        phi_vector,
+        phi_dot_vector,
+        r_vector,
+        r_dot_vector,
+        mass1,
+        mass2,
+        S1z,
+        S2z,
+        R,
+        mode_pn_order,
     )
 
 
@@ -180,16 +208,16 @@ def inspiral_esigma_mode_from_dynamics(
 #  XLALSimInspiralesigmaStrainFromDynamics  (public)
 # ------------------------------------------------------------------ #
 def esigma_strain_from_dynamics(
-    t_vector:       np.ndarray,
-    x_vector:       np.ndarray,
-    phi_vector:     np.ndarray,
+    t_vector: np.ndarray,
+    x_vector: np.ndarray,
+    phi_vector: np.ndarray,
     phi_dot_vector: np.ndarray,
-    r_vector:       np.ndarray,
-    r_dot_vector:   np.ndarray,
-    mass1:      float,
-    mass2:      float,
-    S1z:        float,
-    S2z:        float,
+    r_vector: np.ndarray,
+    r_dot_vector: np.ndarray,
+    mass1: float,
+    mass2: float,
+    S1z: float,
+    S2z: float,
     euler_iota: float,
     euler_beta: float,
     R:          float,
@@ -216,13 +244,13 @@ def esigma_strain_from_dynamics(
 # x_model_eccbbh_inspiral_waveform  (internal, called by esigma)
 # ------------------------------------------------------------------ #
 def x_model_eccbbh_inspiral_waveform(
-    mass1:          float,   # solar masses
-    mass2:          float,
-    S1z:            float,
-    S2z:            float,
-    e_init:         float,
-    f_gw_init:      float,   # Hz
-    distance:       float,   # metres
+    mass1: float,  # solar masses
+    mass2: float,
+    S1z: float,
+    S2z: float,
+    e_init: float,
+    f_gw_init: float,  # Hz
+    distance: float,  # metres
     mean_anom_init: float,
     ode_eps:        float,
     euler_iota:     float,
@@ -242,9 +270,15 @@ def x_model_eccbbh_inspiral_waveform(
     """
     # --- Step 1: orbital dynamics ----------------------------------- #
     dyn = inspiral_esigma_dynamics(
-        mass1, mass2, S1z, S2z,
-        e_init, f_gw_init, mean_anom_init,
-        ode_eps, sampling_rate,
+        mass1,
+        mass2,
+        S1z,
+        S2z,
+        e_init,
+        f_gw_init,
+        mean_anom_init,
+        ode_eps,
+        sampling_rate,
     )
 
     # --- Step 2: strain from dynamics ------------------------------- #
@@ -265,15 +299,16 @@ def x_model_eccbbh_inspiral_waveform(
 
     return h_plus, h_cross
 
+
 def inspiral_esigma_dynamics(
-    mass1,          # mass1 in solar mass
-    mass2,          # mass2 in solar mass
-    S1z,            # z-component of spin of companion 1
-    S2z,            # z-component of spin of companion 2
-    e_init,         # initial eccentricity
-    f_gw_init,      # initial GW frequency
-    mean_anom_init, # initial mean anomaly
-    ode_eps,        # tolerance (relative)
+    mass1,  # mass1 in solar mass
+    mass2,  # mass2 in solar mass
+    S1z,  # z-component of spin of companion 1
+    S2z,  # z-component of spin of companion 2
+    e_init,  # initial eccentricity
+    f_gw_init,  # initial GW frequency
+    mean_anom_init,  # initial mean anomaly
+    ode_eps,  # tolerance (relative)
     sampling_rate,  # sample rate in Hz
     abs_tol = 1e-17, # absolute tolerance
     solve_ivp_method = "RK45", # method for solve_ivp module
@@ -299,59 +334,61 @@ def inspiral_esigma_dynamics(
     # ------------------------------------------------------------------ #
     # Mass / PN bookkeeping
     # ------------------------------------------------------------------ #
-    total_mass    = mass1 + mass2
-    reduced_mass  = mass1 * mass2 / total_mass
-    eta           = reduced_mass / total_mass   # symmetric mass ratio
+    total_mass = mass1 + mass2
+    reduced_mass = mass1 * mass2 / total_mass
+    eta = reduced_mass / total_mass  # symmetric mass ratio
 
     omega_init = LAL_PI * f_gw_init * LAL_MTSUN_SI
-    x_init     = (total_mass * omega_init) ** (2.0 / 3.0)
+    x_init = (total_mass * omega_init) ** (2.0 / 3.0)
 
     # PN / radiation order (mirror the C env-var logic; default hardcoded)
     # rad_pn_order = int(os.environ.get("RadiationPNOrder", RadiationPNOrderDefault))
     params = Params(
-                    eta=eta,
-                    radiation_pn_order=rad_pn_order,
-                    m1=mass1,
-                    m2=mass2,
-                    S1z=S1z,
-                    S2z=S2z,
-                    )
+        eta=eta,
+        radiation_pn_order=rad_pn_order,
+        m1=mass1,
+        m2=mass2,
+        S1z=S1z,
+        S2z=S2z,
+    )
 
     # ------------------------------------------------------------------ #
     # Termination condition: ISCO
     # ------------------------------------------------------------------ #
     TRANS = inspiral_end_radius
     f_gw_isco = 1.0 / (TRANS * math.sqrt(TRANS) * LAL_PI * total_mass)
-    x_final   = (LAL_PI * total_mass * f_gw_isco) ** (2.0 / 3.0)
+    x_final = (LAL_PI * total_mass * f_gw_isco) ** (2.0 / 3.0)
 
     # ------------------------------------------------------------------ #
     # Time step in geometric units
     # ------------------------------------------------------------------ #
-    dt_sec = 1.0 / sampling_rate                        # seconds
-    dt     = dt_sec / (total_mass * LAL_MTSUN_SI)       # geometric (M)
+    dt_sec = 1.0 / sampling_rate  # seconds
+    dt = dt_sec / (total_mass * LAL_MTSUN_SI)  # geometric (M)
 
     # ------------------------------------------------------------------ #
     # Initial conditions  y = [x, e, l (mean anomaly), phi]
     # ------------------------------------------------------------------ #
-    
+
     y0 = np.array([x_init, e_init, mean_anom_init, 0.0])
 
     # Define the ODE system as a function of (t, y)
     def rhs(t, y):
         return eccentric_x_model_odes(t, y, params)
-    
-    MAX_SAMPLES = 2048 * 16384 # maximum number of samples to prevent infinite loops; adjust as needed
-    
-    #=========== ODE solver using solve_ivp =========================#
-    
-    #--- define the termination condition as an event function ---#
+
+    MAX_SAMPLES = (
+        2048 * 16384
+    )  # maximum number of samples to prevent infinite loops; adjust as needed
+
+    # =========== ODE solver using solve_ivp (LSODA)=========================#
+
+    # --- define the termination condition as an event function ---#
     def isco_event(t, y):
-        return y[0] - x_final   # stop when x >= x_final
+        return y[0] - x_final  # stop when x >= x_final
 
     isco_event.terminal = True
     isco_event.direction = 1
     t_max = MAX_SAMPLES * dt
-    #-----------------------------------
+    # -----------------------------------
     sol = solve_ivp(
                         rhs,
                         (0.0, t_max),   # large upper bound; event will stop earlier
@@ -363,7 +400,7 @@ def inspiral_esigma_dynamics(
                         events=isco_event,
                     )
     t_arr = sol.t
-    y_arr = sol.y.T   # shape (N, 4)
+    y_arr = sol.y.T  # shape (N, 4)
 
     # NaN / Inf guard (equivalent to your check)
     bad_number = False
@@ -371,9 +408,9 @@ def inspiral_esigma_dynamics(
         bad_number = True
 
     # Unpack variables
-    x_arr   = y_arr[:, 0]
-    e_arr   = y_arr[:, 1]
-    l_arr   = y_arr[:, 2]
+    x_arr = y_arr[:, 0]
+    e_arr = y_arr[:, 1]
+    l_arr = y_arr[:, 2]
     phi_arr = y_arr[:, 3]
 
     u_arr = np.empty_like(x_arr)
@@ -385,22 +422,24 @@ def inspiral_esigma_dynamics(
         u_arr[i] = ui
         r_arr[i] = ri
 
-    final_i = len(t_arr)  
+    final_i = len(t_arr)
     if final_i < 4:
-        raise RuntimeError("Integration produced fewer than 4 points; cannot interpolate.")
+        raise RuntimeError(
+            "Integration produced fewer than 4 points; cannot interpolate."
+        )
     elif bad_number:
         raise ValueError("Infinity or nan encountered!")
-    
+
     # ------------------------------------------------------------------ #
     # Uniform-grid interpolation
     # ------------------------------------------------------------------ #
     t_final = t_arr[-1]
-    Length  = int(math.ceil(t_final / dt))
+    Length = int(math.ceil(t_final / dt))
 
     if Length < 2:
         raise RuntimeError("Output length < 2; waveform too short.")
 
-    uniform_t = np.arange(Length) * dt   # [0, dt, 2·dt, …]
+    uniform_t = np.arange(Length) * dt  # [0, dt, 2·dt, …]
 
     def interp_uniform(t_raw, y_raw):
         cs = CubicSpline(t_raw, y_raw)
@@ -429,12 +468,12 @@ def inspiral_esigma_dynamics(
     uniform_t_sec = uniform_t * (total_mass * LAL_MTSUN_SI)
 
     return {
-        "time_evol":          uniform_t_sec,
-        "x_evol":             uniform_x,
-        "eccentricity_evol":  uniform_e,
-        "mean_ano_evol":      uniform_l,
-        "phi_evol":           uniform_phi,
-        "phi_dot_evol":       uniform_phi_dot,
-        "r_evol":             uniform_r,
-        "r_dot_evol":         uniform_r_dot,
+        "time_evol": uniform_t_sec,
+        "x_evol": uniform_x,
+        "eccentricity_evol": uniform_e,
+        "mean_ano_evol": uniform_l,
+        "phi_evol": uniform_phi,
+        "phi_dot_evol": uniform_phi_dot,
+        "r_evol": uniform_r,
+        "r_dot_evol": uniform_r_dot,
     }

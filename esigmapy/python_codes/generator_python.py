@@ -289,7 +289,9 @@ def get_inspiral_esigma_modes_py(
         # eccentricity = e[-1]
         # mean_anomaly = l[-1]
         # f_start = f_lower
-        raise ValueError('fref > flow case is currently not supported. Please set f_ref <= f_lower.')
+        raise ValueError(
+            "fref > flow case is currently not supported. Please set f_ref <= f_lower."
+        )
     elif f_ref < f_lower:
         itime = time.perf_counter()
         f_start = f_ref
@@ -313,7 +315,7 @@ def get_inspiral_esigma_modes_py(
     if f_ref < f_lower:
         x = np.asarray(retval["x_evol"])
         ref_idx = np.searchsorted(
-            (x ** 1.5) / ((mass1 + mass2) * lal.MTSUN_SI * np.pi),
+            (x**1.5) / ((mass1 + mass2) * lal.MTSUN_SI * np.pi),
             f_lower,
         )
 
@@ -330,9 +332,7 @@ def get_inspiral_esigma_modes_py(
     r = np.asarray(retval["r_evol"])
     rdot = np.asarray(retval["r_dot_evol"])
 
-    t *= (
-        mass1 + mass2
-    ) * lal.MTSUN_SI  # Time from geometrized units to seconds
+    t *= (mass1 + mass2) * lal.MTSUN_SI  # Time from geometrized units to seconds
 
     if verbose:
         print(f"Orbital evolution took: {time.perf_counter() - itime} seconds")
@@ -633,22 +633,16 @@ def get_imr_esigma_modes_py(
                       Try one of: [NRSur7dq4, SEOBNRv4PHM]"""
         )
     if (mean_anomaly is None) and (coa_phase is None):
-        raise IOError(
-            f"""Please specify one of the phase angles, either of
-                      `mean_anomaly` or `coa_phase`."""
-        )
+        raise IOError(f"""Please specify one of the phase angles, either of
+                      `mean_anomaly` or `coa_phase`.""")
     if blend_aligning_merger_to_inspiral and (mean_anomaly is None):
-        raise IOError(
-            f"""If you want to attach ESIGMA inspiral to merger, by
+        raise IOError(f"""If you want to attach ESIGMA inspiral to merger, by
                       phase shifting merger to inspiral, please specify the
-                      phase angle `mean_anomaly`"""
-        )
+                      phase angle `mean_anomaly`""")
     if (not blend_aligning_merger_to_inspiral) and (coa_phase is None):
-        raise IOError(
-            f"""If you want to attach ESIGMA inspiral to merger, by
+        raise IOError(f"""If you want to attach ESIGMA inspiral to merger, by
                       phase shifting inspiral to merger, please specify the
-                      phase angle `coa_phase`"""
-        )
+                      phase angle `coa_phase`""")
     if mean_anomaly is None:
         mean_anomaly = 0
     if coa_phase is None:
@@ -668,13 +662,11 @@ def get_imr_esigma_modes_py(
             set(available_inspiral_orbital_params)
         )
         if return_orbital_params_user != set(return_orbital_params):
-            print(
-                f"""Warning: You requested the following list of orbital
+            print(f"""Warning: You requested the following list of orbital
 parameters to be returned: {return_orbital_params}, but we reduce it to
 {return_orbital_params_user} as we only have the evolution of the following 
 parameters available with us: {available_inspiral_orbital_params}.
-                  """
-            )
+                  """)
     elif not return_orbital_params:
         return_orbital_params = []
         return_orbital_params_user = False
@@ -730,29 +722,23 @@ parameters available with us: {available_inspiral_orbital_params}.
     # Retrieve modes, orbital phase and frequency from the returned list
     modes_inspiral_numpy = retval[-1]
     if mode_to_align_by not in modes_inspiral_numpy:
-        raise RuntimeError(
-            f"""The inspiral modes do not contain the primary 
+        raise RuntimeError(f"""The inspiral modes do not contain the primary 
 desired {mode_to_align_by} multipole. It currently holds only the following:
-{modes_inspiral_numpy.keys()}"""
-        )
+{modes_inspiral_numpy.keys()}""")
 
     orbital_eccentricity = retval[-2]["e"]
     # Throw error if eccentricity at the end of inspiral is definitely unsafe
     if orbital_eccentricity[-1] > ECCENTRICITY_LEVEL_ISCO_ERROR:
-        raise IOError(
-            f"""ERROR: You entered a very large initial eccentricity
+        raise IOError(f"""ERROR: You entered a very large initial eccentricity
 {eccentricity}. The orbital eccentricity at the end of inspiral was
 {orbital_eccentricity[-1]}. The merger-ringdown attachment with a
-quasicircular will be questionable."""
-        )
+quasicircular will be questionable.""")
     # Warn user if eccentricity at the end of inspiral is potentially unsafe
     if orbital_eccentricity[-1] > ECCENTRICITY_LEVEL_ISCO_WARNING and verbose:
-        print(
-            f"""WARNING: You entered a very large initial eccentricity
+        print(f"""WARNING: You entered a very large initial eccentricity
 {eccentricity}. The orbital eccentricity at the end of inspiral was
 {orbital_eccentricity[-1]}. The merger-ringdown attachment with a quasicircular
-model might be affected."""
-        )
+model might be affected.""")
 
     if (f_window_mr_transition is None) or failsafe or (verbose > 1):
         if blend_using_avg_orbital_frequency:
@@ -776,14 +762,12 @@ model might be affected."""
             modes_inspiral_numpy[mode_to_align_by]
         )
         mode_frequency = esigmapy.blend.compute_frequency(mode_phase, delta_t)
-        print(
-            f"""DEBUG: Orbital freq at end of inspiral is {orbital_frequency[-1]}Hz,
+        print(f"""DEBUG: Orbital freq at end of inspiral is {orbital_frequency[-1]}Hz,
 mode-{mode_to_align_by} freq at the end of inspiral is {mode_frequency[-1]}Hz, max and min
 mode-{mode_to_align_by} frequencies are {np.max(mode_frequency)}Hz and
 {np.min(mode_frequency)}Hz, and the transition frequency (of {mode_to_align_by}-mode)
 requested is {f_mr_transition}Hz, which should be less than the maximum freq of
-{mode_to_align_by}-mode: {mode_frequency.max()}Hz."""
-        )
+{mode_to_align_by}-mode: {mode_frequency.max()}Hz.""")
         return (
             modes_inspiral_numpy,
             mode_phase,
@@ -802,12 +786,10 @@ requested is {f_mr_transition}Hz, which should be less than the maximum freq of
         mode_frequency = esigmapy.blend.compute_frequency(mode_phase, delta_t)
         if mode_frequency.max() < f_mr_transition:
             if verbose:
-                print(
-                    f"""FAILSAFE: Maximum orbital freq during inspiral is
+                print(f"""FAILSAFE: Maximum orbital freq during inspiral is
 {orbital_frequency.max()}Hz, and max frequency of {mode_to_align_by}-mode is
 {mode_frequency.max()}Hz, so we are resetting transition frequency from
-{f_mr_transition}Hz to {mode_frequency.max()}Hz."""
-                )
+{f_mr_transition}Hz to {mode_frequency.max()}Hz.""")
             f_mr_transition = mode_frequency.max()
 
     # If the user does not provide the width of hybridization window (
@@ -893,12 +875,10 @@ requested is {f_mr_transition}Hz, which should be less than the maximum freq of
             verbose=verbose,
         )
     except Exception as exc:
-        print(
-            f"""Inspiral + MergerRingdown attachment failed. It's very likely
+        print(f"""Inspiral + MergerRingdown attachment failed. It's very likely
 that you entered a very large initial eccentricity {eccentricity}. The orbital
 eccentricity at the end of inspiral was {orbital_eccentricity[-1]}
-              """
-        )
+              """)
         raise exc
     modes_imr_numpy = retval[0]
 
