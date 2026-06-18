@@ -558,6 +558,8 @@ def get_imr_esigma_modes_py(
     return_orbital_params=False,
     failsafe=True,
     verbose=False,
+    integrator="lsoda",
+    ode_eps=1e-11,
     **kwargs
 ):
     """
@@ -964,6 +966,8 @@ def get_imr_esigma_waveform_py(
     return_orbital_params=False,
     failsafe=True,
     verbose=False,
+    integrator="lsoda",
+    ode_eps=1e-11,
     **kwargs,
 ):
     """
@@ -1073,6 +1077,8 @@ def get_imr_esigma_waveform_py(
         return_orbital_params=return_orbital_params,
         failsafe=failsafe,
         verbose=verbose,
+        integrator=integrator,
+        ode_eps=ode_eps,
         **kwargs,
     )
     if return_hybridization_info and return_orbital_params:
