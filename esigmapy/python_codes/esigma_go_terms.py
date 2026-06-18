@@ -6177,10 +6177,10 @@ def generate_hlm(
     amplitude = (4 * total_mass * eta * np.sqrt(M_PI / 5.0)) / R
 
     if m < 0:
-        amplitude = (-1) ** l * amplitude
+        if l & 1: amplitude = - amplitude
         waveform_modes = np.conjugate(waveform_modes)
 
-    phase_factor = rect(1.0, -m * Phi)
+    phase_factor = np.exp(1j * (- m * Phi))
     return amplitude * waveform_modes * phase_factor
 
 
