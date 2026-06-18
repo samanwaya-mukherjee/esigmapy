@@ -31,7 +31,7 @@ def eccentricity_at_extremum_frequency_py(
     extremum="periastron",
     show_figures=False,
     verbose=False,
-    rad_pn_order = 8,
+    rad_pn_order=8,
     ode_eps=1e-11,
 ):
     """ """
@@ -136,7 +136,7 @@ def eccentricity_at_reference_frequency_py(
     f_reference,
     show_figures=False,
     verbose=False,
-    rad_pn_order = 8,
+    rad_pn_order=8,
     ode_eps=1e-11,
 ):
     """ """
@@ -215,7 +215,7 @@ def get_inspiral_esigma_modes_py(
     integrator="lsoda",
     verbose=False,
     ode_eps=1e-11,
-    **kwargs
+    **kwargs,
 ):
     """
     Returns inspiral ESIGMA GW modes
@@ -241,10 +241,10 @@ def get_inspiral_esigma_modes_py(
     return_pycbc_timeseries : If True, returns data in the form of PyCBC timeseries.
                                 True by default.
     verbose                 : Verbosity flag
-    kwargs                  : Additional keyword arguments to be passed to the ODE solver and mode generator. 
-                                Available kwargs are:   solve_ivp_method (default: 'RK45'), 
-                                                        abs_tol (default: 1e-17), 
-                                                        rad_pn_order (default: 8), 
+    kwargs                  : Additional keyword arguments to be passed to the ODE solver and mode generator.
+                                Available kwargs are:   solve_ivp_method (default: 'RK45'),
+                                                        abs_tol (default: 1e-17),
+                                                        rad_pn_order (default: 8),
                                                         mode_pn_order (default: 8)
 
     Returns
@@ -256,19 +256,19 @@ def get_inspiral_esigma_modes_py(
         modes             : Dictionary of GW modes
     """
 
-    solve_ivp_method=kwargs.pop('solve_ivp_method','RK45')
-    abs_tol=kwargs.pop('abs_tol',1e-17)
-    rad_pn_order = kwargs.pop('rad_pn_order', 8)
-    mode_pn_order = kwargs.pop('mode_pn_order', 8)
-    inspiral_end_radius = kwargs.pop('inspiral_end_radius', 4.0)
+    solve_ivp_method = kwargs.pop("solve_ivp_method", "RK45")
+    abs_tol = kwargs.pop("abs_tol", 1e-17)
+    rad_pn_order = kwargs.pop("rad_pn_order", 8)
+    mode_pn_order = kwargs.pop("mode_pn_order", 8)
+    inspiral_end_radius = kwargs.pop("inspiral_end_radius", 4.0)
 
     if kwargs:
         valid_kwargs = (
-            'solve_ivp_method',
-            'abs_tol',
-            'rad_pn_order',
-            'mode_pn_order',
-            'inspiral_end_radius',
+            "solve_ivp_method",
+            "abs_tol",
+            "rad_pn_order",
+            "mode_pn_order",
+            "inspiral_end_radius",
         )
 
         raise TypeError(
@@ -330,7 +330,7 @@ def get_inspiral_esigma_modes_py(
         1 / delta_t,
         solve_ivp_method=solve_ivp_method,
         abs_tol=abs_tol,
-        rad_pn_order= rad_pn_order,
+        rad_pn_order=rad_pn_order,
         inspiral_end_radius=inspiral_end_radius,
         integrator=integrator,
     )
@@ -468,10 +468,10 @@ def get_inspiral_esigma_waveform_py(
         return_pycbc_timeseries : If True, returns data in the form of PyCBC timeseries.
                                    True by default
         verbose                 : Verbosity level. Available values are: 0, 1, 2
-        kwargs                  : Additional keyword arguments to be passed to the ODE solver and mode generator. 
-                                    Available kwargs are:   solve_ivp_method (default: 'RK45'), 
-                                                            abs_tol (default: 1e-17), 
-                                                            rad_pn_order (default: 8), 
+        kwargs                  : Additional keyword arguments to be passed to the ODE solver and mode generator.
+                                    Available kwargs are:   solve_ivp_method (default: 'RK45'),
+                                                            abs_tol (default: 1e-17),
+                                                            rad_pn_order (default: 8),
                                                             mode_pn_order (default: 8)
 
     Returns
@@ -499,7 +499,7 @@ def get_inspiral_esigma_waveform_py(
         return_orbital_params=return_orbital_params,
         verbose=verbose,
         return_pycbc_timeseries=False,
-        **kwargs
+        **kwargs,
     )
 
     if return_orbital_params:
@@ -560,7 +560,7 @@ def get_imr_esigma_modes_py(
     verbose=False,
     integrator="lsoda",
     ode_eps=1e-11,
-    **kwargs
+    **kwargs,
 ):
     """
     Returns IMR GW modes constructed using ESIGMA for inspiral and
@@ -636,10 +636,10 @@ def get_imr_esigma_modes_py(
                                      user, if the inputs to this method lead
                                      into exceptions.
         verbose                   : Verbosity level. Available values are: 0, 1, 2
-        kwargs                  : Additional keyword arguments to be passed to the ODE solver and mode generator. 
-                                Available kwargs are:   solve_ivp_method (default: 'RK45'), 
-                                                        abs_tol (default: 1e-17), 
-                                                        rad_pn_order (default: 8), 
+        kwargs                  : Additional keyword arguments to be passed to the ODE solver and mode generator.
+                                Available kwargs are:   solve_ivp_method (default: 'RK45'),
+                                                        abs_tol (default: 1e-17),
+                                                        rad_pn_order (default: 8),
                                                         mode_pn_order (default: 8)
 
 
@@ -1035,10 +1035,10 @@ def get_imr_esigma_waveform_py(
                                      user, if the inputs to this method lead
                                      into exceptions.
         verbose                   : Verbosity level. Available values are: 0, 1, 2
-        kwargs                  : Additional keyword arguments to be passed to the ODE solver and mode generator. 
-                                Available kwargs are:   solve_ivp_method (default: 'RK45'), 
-                                                        abs_tol (default: 1e-17), 
-                                                        rad_pn_order (default: 8), 
+        kwargs                  : Additional keyword arguments to be passed to the ODE solver and mode generator.
+                                Available kwargs are:   solve_ivp_method (default: 'RK45'),
+                                                        abs_tol (default: 1e-17),
+                                                        rad_pn_order (default: 8),
                                                         mode_pn_order (default: 8)
 
 

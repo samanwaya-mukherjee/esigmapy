@@ -12,9 +12,9 @@ from .esigma_go_terms import *
 import lal
 
 # Constants (LAL equivalents)
-LAL_PI = lal.PI 
-LAL_MTSUN_SI = lal.MTSUN_SI #4.925491025543576e-6, Solar mass in seconds
-LAL_MRSUN_SI = lal.MRSUN_SI #1.476625061404649e3   # solar mass in metres
+LAL_PI = lal.PI
+LAL_MTSUN_SI = lal.MTSUN_SI  # 4.925491025543576e-6, Solar mass in seconds
+LAL_MRSUN_SI = lal.MRSUN_SI  # 1.476625061404649e3   # solar mass in metres
 
 RadiationPNOrderDefault = 8  # Default radiation reaction PN order (3PN)
 
@@ -60,7 +60,9 @@ def rhs_cfunc(t, u, du, p):
 
 
 @njit(cache=True)
-def integrate_to_isco_numbalsoda(funcptr, y0, params_array, dt, x_final, max_samples, ode_eps):
+def integrate_to_isco_numbalsoda(
+    funcptr, y0, params_array, dt, x_final, max_samples, ode_eps
+):
     chunk_size = 1024
 
     t_arr = np.empty(max_samples, dtype=np.float64)
@@ -123,8 +125,11 @@ def integrate_to_isco_numbalsoda(funcptr, y0, params_array, dt, x_final, max_sam
 
     return t_arr[:idx], y_arr[:idx], bad_number
 
+
 @njit(cache=True)
-def integrate_to_isco_numbalsoda_dop853(funcptr, y0, params_array, dt, x_final, max_samples, ode_eps):
+def integrate_to_isco_numbalsoda_dop853(
+    funcptr, y0, params_array, dt, x_final, max_samples, ode_eps
+):
     chunk_size = 1024
 
     t_arr = np.empty(max_samples, dtype=np.float64)
@@ -186,7 +191,6 @@ def integrate_to_isco_numbalsoda_dop853(funcptr, y0, params_array, dt, x_final, 
         t_curr = t_eval[-1]
 
     return t_arr[:idx], y_arr[:idx], bad_number
-
 
 
 # from dataclasses import dataclass, field
@@ -304,8 +308,8 @@ def compute_strain_from_dynamics(
     S2z: float,
     euler_iota: float,
     euler_beta: float,
-    R:          float,
-    vpnorder:   int,
+    R: float,
+    vpnorder: int,
     ONLY_LeqM_MODES: bool,
     L_MIN: int = 2,
     L_MAX: int = 8,
@@ -365,11 +369,11 @@ def inspiral_esigma_mode_from_dynamics(
     r_dot_vector: np.ndarray,
     mass1: float,
     mass2: float,
-    S1z:   float,
-    S2z:   float,
-    R:     float,
+    S1z: float,
+    S2z: float,
+    R: float,
     mode_pn_order: int,
-) -> np.ndarray:               # complex128
+) -> np.ndarray:  # complex128
     """
     Public wrapper: compute a single (l, m) waveform mode from dynamics.
 
@@ -410,7 +414,7 @@ def esigma_strain_from_dynamics(
     S2z: float,
     euler_iota: float,
     euler_beta: float,
-    R:          float,
+    R: float,
     mode_pn_order: int,
     ONLY_LeqM_MODES: bool = False,
     L_MIN: int = 2,
@@ -423,10 +427,22 @@ def esigma_strain_from_dynamics(
     # mode_pn_order = int(os.environ.get("ModePNOrder", ModePNOrderDefault))
 
     return compute_strain_from_dynamics(
-        x_vector, phi_vector, phi_dot_vector,
-        r_vector, r_dot_vector,
-        mass1, mass2, S1z, S2z,
-        euler_iota, euler_beta, R, mode_pn_order, ONLY_LeqM_MODES, L_MIN, L_MAX
+        x_vector,
+        phi_vector,
+        phi_dot_vector,
+        r_vector,
+        r_dot_vector,
+        mass1,
+        mass2,
+        S1z,
+        S2z,
+        euler_iota,
+        euler_beta,
+        R,
+        mode_pn_order,
+        ONLY_LeqM_MODES,
+        L_MIN,
+        L_MAX,
     )
 
 
@@ -442,10 +458,10 @@ def x_model_eccbbh_inspiral_waveform(
     f_gw_init: float,  # Hz
     distance: float,  # metres
     mean_anom_init: float,
-    ode_eps:        float,
-    euler_iota:     float,
-    euler_beta:     float,
-    sampling_rate:  float,   # Hz
+    ode_eps: float,
+    euler_iota: float,
+    euler_beta: float,
+    sampling_rate: float,  # Hz
     ONLY_LeqM_MODES: bool,
     L_MIN: int,
     L_MAX: int,
@@ -481,12 +497,17 @@ def x_model_eccbbh_inspiral_waveform(
         dyn["phi_dot_evol"],
         dyn["r_evol"],
         dyn["r_dot_evol"],
-        mass1, mass2, S1z, S2z,
-        euler_iota, euler_beta, distance,
+        mass1,
+        mass2,
+        S1z,
+        S2z,
+        euler_iota,
+        euler_beta,
+        distance,
         mode_pn_order,
         ONLY_LeqM_MODES,
         L_MIN,
-        L_MAX
+        L_MAX,
     )
 
     return h_plus, h_cross
@@ -502,10 +523,10 @@ def inspiral_esigma_dynamics(
     mean_anom_init,  # initial mean anomaly
     ode_eps,  # tolerance (relative)
     sampling_rate,  # sample rate in Hz
-    abs_tol = 1e-17, # absolute tolerance
-    solve_ivp_method = "RK45", # method for solve_ivp module
-    rad_pn_order = 8, # Radiation PN order
-    inspiral_end_radius = 4.0, # Inspiral end radius (in units of total mass)   
+    abs_tol=1e-17,  # absolute tolerance
+    solve_ivp_method="RK45",  # method for solve_ivp module
+    rad_pn_order=8,  # Radiation PN order
+    inspiral_end_radius=4.0,  # Inspiral end radius (in units of total mass)
     integrator="lsoda",
 ):
     """

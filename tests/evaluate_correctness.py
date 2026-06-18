@@ -2,7 +2,7 @@ import os
 import sys
 
 # Ensure the parent directory is in sys.path so we can import esigmapy
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import json
 import time
