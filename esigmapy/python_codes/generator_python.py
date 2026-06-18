@@ -32,6 +32,7 @@ def eccentricity_at_extremum_frequency_py(
     show_figures=False,
     verbose=False,
     rad_pn_order = 8,
+    ode_eps=1e-11,
 ):
     """ """
     if extremum.lower() not in ["periastron", "apastron"]:
@@ -42,7 +43,16 @@ def eccentricity_at_extremum_frequency_py(
 
     itime = time.perf_counter()
     retval = inspiral_esigma_dynamics(
-        mass1, mass2, spin1z, spin2z, e0, f_lower, l0, 1e-12, sample_rate, rad_pn_order=rad_pn_order,
+        mass1,
+        mass2,
+        spin1z,
+        spin2z,
+        e0,
+        f_lower,
+        l0,
+        ode_eps,
+        sample_rate,
+        rad_pn_order=rad_pn_order,
     )
     # t, x, e, l, phi, phidot, r, rdot = retval[:8]
 
@@ -127,11 +137,21 @@ def eccentricity_at_reference_frequency_py(
     show_figures=False,
     verbose=False,
     rad_pn_order = 8,
+    ode_eps=1e-11,
 ):
     """ """
     itime = time.perf_counter()
     retval = inspiral_esigma_dynamics(
-        mass1, mass2, spin1z, spin2z, e0, f_lower, l0, 1e-12, sample_rate, rad_pn_order=rad_pn_order,
+        mass1,
+        mass2,
+        spin1z,
+        spin2z,
+        e0,
+        f_lower,
+        l0,
+        ode_eps,
+        sample_rate,
+        rad_pn_order=rad_pn_order,
     )
     # t, x, e, l, phi, phidot, r, rdot = retval[:8]
 
@@ -192,7 +212,9 @@ def get_inspiral_esigma_modes_py(
     include_conjugate_modes=True,
     return_orbital_params=False,
     return_pycbc_timeseries=True,
+    integrator="lsoda",
     verbose=False,
+    ode_eps=1e-11,
     **kwargs
 ):
     """
@@ -304,12 +326,13 @@ def get_inspiral_esigma_modes_py(
         eccentricity,
         f_start,
         mean_anomaly,
-        1e-12,
+        ode_eps,
         1 / delta_t,
         solve_ivp_method=solve_ivp_method,
         abs_tol=abs_tol,
         rad_pn_order= rad_pn_order,
         inspiral_end_radius=inspiral_end_radius,
+        integrator=integrator,
     )
 
     if f_ref < f_lower:
@@ -716,6 +739,8 @@ parameters available with us: {available_inspiral_orbital_params}.
         return_orbital_params=list(return_orbital_params),
         return_pycbc_timeseries=False,
         verbose=verbose,
+        integrator=integrator,
+        ode_eps=ode_eps,
         **kwargs,
     )
 

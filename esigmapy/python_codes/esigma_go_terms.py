@@ -1,7 +1,8 @@
 # Translated from ESIGMA_GO_Terms.c by Samanwaya Mukherjee, 2026
 
 import numpy as np
-from dataclasses import dataclass
+from collections import namedtuple
+from numba import njit
 
 # Storing constants
 M_PI = np.pi
@@ -11,6 +12,7 @@ LOG3 = np.log(3)
 
 
 # ----------------------------------------------------
+@njit(cache=True)
 def rect(r: float, phi: float) -> complex:
     """Convert polar coordinates to rectangular form."""
     return r * np.exp(1j * phi)
@@ -19,26 +21,9 @@ def rect(r: float, phi: float) -> complex:
 # ----------------------------------------------------
 
 
-@dataclass
-class CommonVars:
-    """
-    A dataclass to hold common variables for GO term calculations.
-    xp5: float
-    logx: float
-    b0: float
-    r0: float
-    logb0: float
-    logr0: float
-    delta: float
-    """
-
-    xp5: float
-    logx: float
-    b0: float
-    r0: float
-    logb0: float
-    logr0: float
-    delta: float
+CommonVars = namedtuple(
+    "CommonVars", ["xp5", "logx", "b0", "r0", "logb0", "logr0", "delta"]
+)
 
 
 # ----------------------------------------------------
@@ -109,6 +94,7 @@ def register_hqc_lm(l, m):
 
 
 @register_hgo_lm(2, 2)
+@njit(cache=True)
 def hGO_2_m_2(
     total_mass: float,
     eta: float,
@@ -962,6 +948,7 @@ def hGO_2_m_2(
 
 
 @register_hqc_lm(2, 2)
+@njit(cache=True)
 def hQC_2_m_2(
     total_mass: float,
     eta: float,
@@ -1251,6 +1238,7 @@ def hQC_2_m_2(
 
 
 @register_hgo_lm(2, 1)
+@njit(cache=True)
 def hGO_2_m_1(
     total_mass: float,
     eta: float,
@@ -2014,6 +2002,7 @@ def hGO_2_m_1(
 
 
 @register_hqc_lm(2, 1)
+@njit(cache=True)
 def hQC_2_m_1(
     total_mass: float,
     eta: float,
@@ -2156,6 +2145,7 @@ def hQC_2_m_1(
 
 
 @register_hgo_lm(3, 3)
+@njit(cache=True)
 def hGO_3_m_3(
     total_mass: float,
     eta: float,
@@ -3032,6 +3022,7 @@ def hGO_3_m_3(
 
 
 @register_hqc_lm(3, 3)
+@njit(cache=True)
 def hQC_3_m_3(
     total_mass: float,
     eta: float,
@@ -3198,6 +3189,7 @@ def hQC_3_m_3(
 
 
 @register_hgo_lm(3, 2)
+@njit(cache=True)
 def hGO_3_m_2(
     total_mass: float,
     eta: float,
@@ -3808,6 +3800,7 @@ def hGO_3_m_2(
 
 
 @register_hqc_lm(3, 2)
+@njit(cache=True)
 def hQC_3_m_2(
     total_mass: float,
     eta: float,
@@ -3880,6 +3873,7 @@ def hQC_3_m_2(
 
 
 @register_hgo_lm(3, 1)
+@njit(cache=True)
 def hGO_3_m_1(
     total_mass: float,
     eta: float,
@@ -4759,6 +4753,7 @@ def hGO_3_m_1(
 
 
 @register_hqc_lm(3, 1)
+@njit(cache=True)
 def hQC_3_m_1(
     mass: float,
     eta: float,
@@ -4922,6 +4917,7 @@ def hQC_3_m_1(
 
 
 @register_hgo_lm(4, 4)
+@njit(cache=True)
 def hGO_4_m_4(
     total_mass: float,
     eta: float,
@@ -5484,6 +5480,7 @@ def hGO_4_m_4(
 
 
 @register_hqc_lm(4, 4)
+@njit(cache=True)
 def hQC_4_m_4(
     mass: float,
     eta: float,
@@ -5556,6 +5553,7 @@ def hQC_4_m_4(
 
 
 @register_hgo_lm(4, 3)
+@njit(cache=True)
 def hGO_4_m_3(
     total_mass: float,
     eta: float,
@@ -6119,6 +6117,7 @@ def hGO_4_m_3(
         return complex(0.0, 0.0)
 
 
+@njit(cache=True)
 def generate_hlm(
     l: int,
     m: int,
@@ -6137,32 +6136,55 @@ def generate_hlm(
 ) -> complex:
     if vpnorder < 0 or vpnorder > 8:
         raise ValueError(
-            f"Error in hl_{l}_m_{m}: Input PN order parameter should be between [0, 8]."
+            "Error in hlm: Input PN order parameter should be between [0, 8]."
         )
 
-    else:
-        # Calculate the leading amplitude coefficient
-        amplitude = (4 * total_mass * eta * np.sqrt(M_PI / 5.0)) / R
+    abs_m = abs(m)
+    waveform_modes = 0j
 
-        GO_func = H_GO_LM_FUNCS.get((l, abs(m)))
-        QC_func = H_QC_LM_FUNCS.get((l, abs(m)))
-
-        # Sum the Generalized Orbital (GO) and Quasi-Circular (QC) terms
-        waveform_modes = GO_func(
+    if l == 2 and abs_m == 2:
+        waveform_modes = hGO_2_m_2(
             total_mass, eta, r, rDOT, PhiDOT, vpnorder, S1z, S2z, x, params
-        ) + QC_func(total_mass, eta, vpnorder, x, S1z, S2z, params)
-        if m < 0:
-            amplitude = (
-                -1
-            ) ** l * amplitude  # Apply the (-1)^l factor for negative m modes
-            waveform_modes = waveform_modes.conjugate()
+        ) + hQC_2_m_2(total_mass, eta, vpnorder, x, S1z, S2z, params)
+    elif l == 2 and abs_m == 1:
+        waveform_modes = hGO_2_m_1(
+            total_mass, eta, r, rDOT, PhiDOT, vpnorder, S1z, S2z, x, params
+        ) + hQC_2_m_1(total_mass, eta, vpnorder, x, S1z, S2z, params)
+    elif l == 3 and abs_m == 3:
+        waveform_modes = hGO_3_m_3(
+            total_mass, eta, r, rDOT, PhiDOT, vpnorder, S1z, S2z, x, params
+        ) + hQC_3_m_3(total_mass, eta, vpnorder, x, S1z, S2z, params)
+    elif l == 3 and abs_m == 2:
+        waveform_modes = hGO_3_m_2(
+            total_mass, eta, r, rDOT, PhiDOT, vpnorder, S1z, S2z, x, params
+        ) + hQC_3_m_2(total_mass, eta, vpnorder, x, S1z, S2z, params)
+    elif l == 3 and abs_m == 1:
+        waveform_modes = hGO_3_m_1(
+            total_mass, eta, r, rDOT, PhiDOT, vpnorder, S1z, S2z, x, params
+        ) + hQC_3_m_1(total_mass, eta, vpnorder, x, S1z, S2z, params)
+    elif l == 4 and abs_m == 4:
+        waveform_modes = hGO_4_m_4(
+            total_mass, eta, r, rDOT, PhiDOT, vpnorder, S1z, S2z, x, params
+        ) + hQC_4_m_4(total_mass, eta, vpnorder, x, S1z, S2z, params)
+    elif l == 4 and abs_m == 3:
+        waveform_modes = hGO_4_m_3(
+            total_mass, eta, r, rDOT, PhiDOT, vpnorder, S1z, S2z, x, params
+        )
+    else:
+        waveform_modes = 0j
 
-        # cpolar(r, theta) in C is equivalent to rect(r, theta) in Python
-        phase_factor = rect(1.0, -m * Phi)
+    # Calculate the leading amplitude coefficient
+    amplitude = (4 * total_mass * eta * np.sqrt(M_PI / 5.0)) / R
 
-        return amplitude * waveform_modes * phase_factor
+    if m < 0:
+        amplitude = (-1) ** l * amplitude
+        waveform_modes = np.conjugate(waveform_modes)
+
+    phase_factor = rect(1.0, -m * Phi)
+    return amplitude * waveform_modes * phase_factor
 
 
+@njit(cache=True)
 def hlmGOresult(
     l: int,
     m: int,
@@ -6186,9 +6208,8 @@ def hlmGOresult(
         raise ValueError("l must be between 2 and 8")
 
     if not (-l <= m <= l):
-        raise ValueError(f"m must be between {-l} and {l}")
+        raise ValueError("m must be within bounds")
 
-    # Modes with m = 0 are zero in your C code
     if m == 0:
         return 0j
 

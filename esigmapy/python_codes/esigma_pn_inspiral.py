@@ -27,6 +27,7 @@ Notes
 """
 
 import numpy as np
+from numba import njit, objmode
 
 # ------ Constants --------------------------------------------------
 EULER_GAMMA = np.euler_gamma  # Euler–Mascheroni constant
@@ -39,11 +40,13 @@ REAL8_FAIL_NAN = float("nan")
 # ============ Utility functions =========================================
 
 
+@njit(cache=True)
 def SymMassRatio(q: float) -> float:
     """Symmetric mass ratio from mass ratio q (can be >1 or <1)."""
     return q / (1.0 + q) ** 2
 
 
+@njit(cache=True)
 def SmallMassRatio(eta: float) -> float:
     """q<1 mass ratio from symmetric mass ratio eta."""
     return (1.0 - 2.0 * eta - np.sqrt(1.0 - 4.0 * eta)) / (2.0 * eta)
@@ -81,17 +84,17 @@ def polygamma(n: int, z: complex, mp_dps=30):
 
         return digamma(z)
 
-    import mpmath as mp
+    from mpmath import fp
 
-    # Use mpmath for higher orders (complex-safe)
-    mp.mp.dps = mp_dps
-    z_mp = mp.mpc(z.real, z.imag) if isinstance(z, complex) else mp.mpf(z)
-    return complex(mp.polygamma(n, z_mp))
+    # Use fp.polygamma for fast 15-digit double precision
+    # fp.polygamma supports complex types natively
+    return complex(fp.polygamma(n, z))
 
 
 # ------ Eccentric enhancement factors -------------------------------
 
 
+@njit(cache=True)
 def phi_e(e: float) -> float:
     e2 = e * e
     ef = 1.0 - e2
@@ -113,6 +116,7 @@ def phi_e(e: float) -> float:
     return num / den
 
 
+@njit(cache=True)
 def psi_e(e: float) -> float:
     e2 = e * e
     ef = 1.0 - e2
@@ -123,6 +127,7 @@ def psi_e(e: float) -> float:
     return num / den
 
 
+@njit(cache=True)
 def zed_e(e: float) -> float:
     e2 = e * e
     ef = 1.0 - e2
@@ -133,6 +138,7 @@ def zed_e(e: float) -> float:
     return num / den
 
 
+@njit(cache=True)
 def kappa_e(e: float) -> float:
     e2 = e * e
     ef = 1.0 - e2
@@ -152,6 +158,7 @@ def kappa_e(e: float) -> float:
     return num / den
 
 
+@njit(cache=True)
 def phi_e_tilde(e: float) -> float:
     e2 = e * e
     ef = 1.0 - e2
@@ -171,6 +178,7 @@ def phi_e_tilde(e: float) -> float:
     return num / den
 
 
+@njit(cache=True)
 def psi_e_tilde(e: float) -> float:
     e2 = e * e
     ef = 1.0 - e2
@@ -190,6 +198,7 @@ def psi_e_tilde(e: float) -> float:
     return num / den
 
 
+@njit(cache=True)
 def zed_e_tilde(e: float) -> float:
     e2 = e * e
     ef = 1.0 - e2
@@ -207,6 +216,7 @@ def zed_e_tilde(e: float) -> float:
     return num / den
 
 
+@njit(cache=True)
 def kappa_e_tilde(e: float) -> float:
     e2 = e * e
     ef = 1.0 - e2
@@ -229,6 +239,7 @@ def kappa_e_tilde(e: float) -> float:
 # ---------- Derived eccentricity functions ----------------------------------
 
 
+@njit(cache=True)
 def phi_e_rad(e: float) -> float:
     ef = 1.0 - e * e
     sqef = np.sqrt(ef)
@@ -237,6 +248,7 @@ def phi_e_rad(e: float) -> float:
     return pre * (sqef * phi_e(e) - phi_e_tilde(e))
 
 
+@njit(cache=True)
 def psi_e_rad(e: float) -> float:
     ef = 1.0 - e * e
     sqef = np.sqrt(ef)
@@ -250,6 +262,7 @@ def psi_e_rad(e: float) -> float:
     return pf1 * b1 + pf2 * b2
 
 
+@njit(cache=True)
 def zed_e_rad(e: float) -> float:
     ef = 1.0 - e * e
     sqef = np.sqrt(ef)
@@ -261,6 +274,7 @@ def zed_e_rad(e: float) -> float:
     return pf1 * b1 + pf2 * b2
 
 
+@njit(cache=True)
 def kappa_e_rad(e: float) -> float:
     ef = 1.0 - e * e
     sqef = np.sqrt(ef)
@@ -271,6 +285,7 @@ def kappa_e_rad(e: float) -> float:
     return pf * b1 / den
 
 
+@njit(cache=True)
 def f_e(e: float) -> float:
     ef = 1.0 - e * e
     e2 = e * e
@@ -288,6 +303,7 @@ def f_e(e: float) -> float:
     return num / denom
 
 
+@njit(cache=True)
 def capital_f_e(e: float) -> float:
     ef = 1.0 - e * e
     e2 = e * e
@@ -298,6 +314,7 @@ def capital_f_e(e: float) -> float:
     return num / denom
 
 
+@njit(cache=True)
 def psi_n(e: float) -> float:
     ef = 1.0 - e * e
     e2 = e * e
@@ -306,6 +323,7 @@ def psi_n(e: float) -> float:
     return pf1 * phi_e(e) + pf2 * psi_e(e)
 
 
+@njit(cache=True)
 def zed_n(e: float) -> float:
     pf1 = 583.0 / 567.0
     pf2 = 16.0 / 567.0
@@ -317,6 +335,7 @@ def zed_n(e: float) -> float:
 ## --------- 0PN terms ------------
 
 
+@njit(cache=True)
 def x_dot_0pn(e: float, eta: float) -> float:
     """Eq. (A26)"""
     e0 = 2.0 * eta * 96.0 / 15.0
@@ -333,6 +352,7 @@ def x_dot_0pn(e: float, eta: float) -> float:
 ## --------- 1PN terms ------------
 
 
+@njit(cache=True)
 def x_dot_1pn(e: float, eta: float) -> float:
     """Eq. (A27)"""
     e0 = -eta * (2972.0 / 105.0 + 176.0 * eta / 5.0)
@@ -354,6 +374,7 @@ def x_dot_1pn(e: float, eta: float) -> float:
 ## --------- 1.5PN terms ------------
 
 
+@njit(cache=True)
 def x_dot_1_5_pn(
     e: float, eta: float, m1: float, m2: float, S1z: float, S2z: float
 ) -> float:
@@ -386,6 +407,7 @@ def x_dot_1_5_pn(
     ) / (45.0 * ef5 * M4)
 
 
+@njit(cache=True)
 def x_dot_hereditary_1_5(e: float, eta: float, x: float) -> float:
     """Eq. (A28)"""
     pre = eta * x * x * x * x * x * x * np.sqrt(x)
@@ -398,6 +420,7 @@ def x_dot_hereditary_1_5(e: float, eta: float, x: float) -> float:
 ## --------- 2PN terms ------------
 
 
+@njit(cache=True)
 def x_dot_2pn(e: float, eta: float, x: float) -> float:
     """Eq. (A29)"""
 
@@ -443,6 +466,7 @@ def x_dot_2pn(e: float, eta: float, x: float) -> float:
         return num / den
 
 
+@njit(cache=True)
 def x_dot_2pn_SS(
     e: float, eta: float, m1: float, m2: float, S1z: float, S2z: float
 ) -> float:
@@ -505,6 +529,7 @@ def x_dot_2pn_SS(
 ## --------- 2.5PN terms ------------
 
 
+@njit(cache=True)
 def x_dot_hereditary_2_5(e: float, eta: float, x: float) -> float:
     """See Huerta et al."""
 
@@ -527,6 +552,7 @@ def x_dot_hereditary_2_5(e: float, eta: float, x: float) -> float:
         return pre * (b1e0 + 2.0 * b2e0 / 3.0)
 
 
+@njit(cache=True)
 def x_dot_2_5pn_SO(
     e: float, eta: float, m1: float, m2: float, S1z: float, S2z: float
 ) -> float:
@@ -638,6 +664,7 @@ def x_dot_2_5pn_SO(
         )
 
 
+@njit(cache=True)
 def x_dot_2_5pn_SF(e: float, eta: float, S1z: float) -> float:
     """
     This piece comes from the horizon flux.
@@ -660,6 +687,7 @@ def x_dot_2_5pn_SF(e: float, eta: float, S1z: float) -> float:
 ## --------- 3PN terms ------------
 
 
+@njit(cache=True)
 def x_dot_hereditary_3(e: float, eta: float, x: float) -> float:
     """See Huerta et al."""
     pi2 = np.pi * np.pi
@@ -694,6 +722,7 @@ def x_dot_hereditary_3(e: float, eta: float, x: float) -> float:
         return pre * x_3_term_e0
 
 
+@njit(cache=True)
 def x_dot_3pn(e: float, eta: float, x: float) -> float:
     """3PN term (Huerta et al.)"""
 
@@ -841,6 +870,7 @@ def x_dot_3pn(e: float, eta: float, x: float) -> float:
     return num / den
 
 
+@njit(cache=True)
 def x_dot_3pn_SO(
     e: float, eta: float, m1: float, m2: float, S1z: float, S2z: float
 ) -> float:
@@ -908,6 +938,7 @@ def x_dot_3pn_SO(
         )
 
 
+@njit(cache=True)
 def x_dot_3pn_SS(
     e: float, eta: float, m1: float, m2: float, S1z: float, S2z: float
 ) -> float:
@@ -1157,6 +1188,7 @@ def x_dot_3pn_SS(
 ## --------- 3.5PN terms ------------
 
 
+@njit(cache=True)
 def x_dot_3_5pnSO(
     e: float, eta: float, m1: float, m2: float, S1z: float, S2z: float
 ) -> float:
@@ -1180,6 +1212,7 @@ def x_dot_3_5pnSO(
     return val_e if abs(e) > 1e-12 else val_e0
 
 
+@njit(cache=True)
 def x_dot_3_5pn_SS(
     e: float, eta: float, m1: float, m2: float, S1z: float, S2z: float
 ) -> float:
@@ -1204,6 +1237,7 @@ def x_dot_3_5pn_SS(
     return val_e if abs(e) > 1e-12 else val_e0
 
 
+@njit(cache=True)
 def x_dot_3_5pn_cubicSpin(
     e: float, eta: float, m1: float, m2: float, S1z: float, S2z: float
 ) -> float:
@@ -1250,6 +1284,7 @@ def x_dot_3_5pn_cubicSpin(
     return val_e if abs(e) > 1e-12 else val_e0
 
 
+@njit(cache=True)
 def x_dot_3_5_pn(e: float, eta: float) -> float:
     """3.5PN non-spinning"""
     val_e0 = (
@@ -1263,6 +1298,7 @@ def x_dot_3_5_pn(e: float, eta: float) -> float:
     return val_e if abs(e) > 1e-12 else val_e0
 
 
+@njit(cache=True)
 def x_dot_3_5pn_SF(e: float, eta: float, S1z: float) -> float:
     """
     This piece comes from the horizon flux (3.5PN term).
@@ -1282,6 +1318,7 @@ def x_dot_3_5pn_SF(e: float, eta: float, S1z: float) -> float:
 ## --------- 4PN and 4.5PN terms ------------
 
 
+@njit(cache=True)
 def x_dot_4pn(e: float, eta: float, x: float) -> float:
     """4PN non-spinning (uses e=0 limit)"""
     euler = EULER_GAMMA
@@ -1303,6 +1340,7 @@ def x_dot_4pn(e: float, eta: float, x: float) -> float:
     return val_e if abs(e) > 1e-12 else val_e0
 
 
+@njit(cache=True)
 def x_dot_4pnSO(
     e: float, eta: float, m1: float, m2: float, S1z: float, S2z: float
 ) -> float:
@@ -1339,6 +1377,7 @@ def x_dot_4pn_SF(e: float, eta: float, S1z: float) -> float:
 
     # gsl_sf_psi_n(0, z) is the digamma function
     # Complex(0, 2) * S1z is 2j * S1z in Python
+
     PolyGammaFunc01 = polygamma(0, 3.0 - (2j * S1z) / denom)
     PolyGammaFunc02 = polygamma(0, 3.0 + (2j * S1z) / denom)
 
@@ -1369,6 +1408,7 @@ def x_dot_4pn_SF(e: float, eta: float, S1z: float) -> float:
     return x_4pn_SF
 
 
+@njit(cache=True)
 def x_dot_4pnSS(
     e: float, eta: float, m1: float, m2: float, S1z: float, S2z: float
 ) -> float:
@@ -1417,6 +1457,7 @@ def x_dot_4pnSS(
     return val_e if abs(e) > 1e-12 else val_e0
 
 
+@njit(cache=True)
 def x_dot_4_5_pn(e: float, eta: float, x: float) -> float:
     """4.5PN non-spinning (uses e=0 limit)"""
     euler = EULER_GAMMA
@@ -1439,6 +1480,7 @@ def x_dot_4_5_pn(e: float, eta: float, x: float) -> float:
 # Self-Force (SF) higher-order terms in addition to x_dot
 
 
+@njit(cache=True)
 def dxdt_4pn(x: float, eta: float) -> float:
     """4PN contribution to dx/dt"""
 
@@ -1524,6 +1566,7 @@ def dxdt_4pn(x: float, eta: float) -> float:
 ## ---------- 0PN -------------
 
 
+@njit(cache=True)
 def e_dot_0pn(e: float, eta: float) -> float:
     """Eq. (A31)"""
     e2 = e * e
@@ -1538,6 +1581,7 @@ def e_dot_0pn(e: float, eta: float) -> float:
 ## ---------- 1PN -------------
 
 
+@njit(cache=True)
 def e_dot_1pn(e: float, eta: float) -> float:
     """Eq. (A32)"""
     if abs(e) < 1e-12:
@@ -1555,6 +1599,7 @@ def e_dot_1pn(e: float, eta: float) -> float:
 ## ---------- 1.5PN -------------
 
 
+@njit(cache=True)
 def e_dot_1_5pn_SO(e: float, m1: float, m2: float, S1z: float, S2z: float) -> float:
     """1.5PN SO eccentricity (Klein et al. arXiv:1801.08542, Eq. C1b)"""
     if abs(e) < 1e-12:
@@ -1572,6 +1617,7 @@ def e_dot_1_5pn_SO(e: float, m1: float, m2: float, S1z: float, S2z: float) -> fl
     )
 
 
+@njit(cache=True)
 def e_rad_hereditary_1_5(e: float, eta: float, x: float) -> float:
     if abs(e) < 1e-12:
         return 0.0
@@ -1582,6 +1628,7 @@ def e_rad_hereditary_1_5(e: float, eta: float, x: float) -> float:
 ## ---------- 2PN -------------
 
 
+@njit(cache=True)
 def e_dot_2pn(e: float, eta: float) -> float:
 
     if abs(e) < 1e-12:
@@ -1625,6 +1672,7 @@ def e_dot_2pn(e: float, eta: float) -> float:
     return e_2_pn
 
 
+@njit(cache=True)
 def e_dot_2pn_SS(e: float, m1: float, m2: float, S1z: float, S2z: float) -> float:
     """2PN SS eccentricity (Quentin Henry et al., arXiv:2308.13606v1)"""
     if abs(e) < 1e-12:
@@ -1662,6 +1710,7 @@ def e_dot_2pn_SS(e: float, m1: float, m2: float, S1z: float, S2z: float) -> floa
 ## ---------- 2.5PN -------------
 
 
+@njit(cache=True)
 def e_dot_2_5pn_SO(e: float, m1: float, m2: float, S1z: float, S2z: float) -> float:
     if abs(e) < 1e-12:
         return 0.0
@@ -1734,6 +1783,7 @@ def e_dot_2_5pn_SO(e: float, m1: float, m2: float, S1z: float, S2z: float) -> fl
     return result
 
 
+@njit(cache=True)
 def e_rad_hereditary_2_5(e: float, eta: float, x: float) -> float:
     if abs(e) < 1e-12:
         return 0.0
@@ -1747,6 +1797,7 @@ def e_rad_hereditary_2_5(e: float, eta: float, x: float) -> float:
 ## --------- 3PN -------------
 
 
+@njit(cache=True)
 def e_rad_hereditary_3(e: float, eta: float, x: float) -> float:
     if abs(e) < 1e-12:
         return 0.0
@@ -1767,6 +1818,7 @@ def e_rad_hereditary_3(e: float, eta: float, x: float) -> float:
     return pre * (a3 + a4)
 
 
+@njit(cache=True)
 def e_dot_3pn(e: float, eta: float, x: float) -> float:
     if abs(e) < 1e-12:
         return 0.0
@@ -1868,6 +1920,7 @@ def e_dot_3pn(e: float, eta: float, x: float) -> float:
     )
 
 
+@njit(cache=True)
 def e_dot_3pn_SO(e: float, m1: float, m2: float, S1z: float, S2z: float) -> float:
     """3PN SO eccentricity (Quentin Henry et al., arXiv:2308.13606v1)"""
     if abs(e) < 1e-12:
@@ -1897,6 +1950,7 @@ def e_dot_3pn_SO(e: float, m1: float, m2: float, S1z: float, S2z: float) -> floa
     ) / (51840.0 * ef_55 * M4)
 
 
+@njit(cache=True)
 def e_dot_3pn_SS(e: float, m1: float, m2: float, S1z: float, S2z: float) -> float:
     if abs(e) < 1e-12:
         return 0.0
@@ -2146,6 +2200,7 @@ def e_dot_3pn_SS(e: float, m1: float, m2: float, S1z: float, S2z: float) -> floa
 ## ---------- 3.5PN -------------
 
 
+@njit(cache=True)
 def e_dot_3_5pn(e: float, eta: float) -> float:
     """3.5PN eccentricity — zero."""
     return 0.0
@@ -2156,6 +2211,7 @@ def e_dot_3_5pn(e: float, eta: float) -> float:
 ## ---------- 1PN -------------
 
 
+@njit(cache=True)
 def l_dot_1pn(e: float, eta: float) -> float:
     """Eq. (A2)"""
     return 3.0 / (e * e - 1.0)
@@ -2164,6 +2220,7 @@ def l_dot_1pn(e: float, eta: float) -> float:
 ## ---------- 1.5PN -------------
 
 
+@njit(cache=True)
 def l_dot_1_5pn_SO(e: float, m1: float, m2: float, S1z: float, S2z: float) -> float:
     """SO correction (Klein et al. arXiv:1801.08542, Eq. B1e/B2e)"""
     e2 = e * e
@@ -2175,6 +2232,7 @@ def l_dot_1_5pn_SO(e: float, m1: float, m2: float, S1z: float, S2z: float) -> fl
 ## ---------- 2PN -------------
 
 
+@njit(cache=True)
 def l_dot_2pn_SS(e: float, m1: float, m2: float, S1z: float, S2z: float) -> float:
     """SS correction (Klein et al. arXiv:1801.08542, Eq. B1e/B2e)"""
     kappa1 = 1.0
@@ -2185,6 +2243,7 @@ def l_dot_2pn_SS(e: float, m1: float, m2: float, S1z: float, S2z: float) -> floa
     ) / (2.0 * (-1 + e**2) ** 2 * (m1 + m2) ** 2)
 
 
+@njit(cache=True)
 def l_dot_2pn(e: float, eta: float) -> float:
     """Eq. (A3)"""
     ef = 1.0 - e * e
@@ -2195,6 +2254,7 @@ def l_dot_2pn(e: float, eta: float) -> float:
 ## ---------- 2.5PN -------------
 
 
+@njit(cache=True)
 def l_dot_2_5pn_SO(e: float, m1: float, m2: float, S1z: float, S2z: float) -> float:
     """2.5PN SO (Quentin Henry et al., arXiv:2308.13606v1)"""
     e2 = e * e
@@ -2218,6 +2278,7 @@ def l_dot_2_5pn_SO(e: float, m1: float, m2: float, S1z: float, S2z: float) -> fl
 ## ---------- 3PN -------------
 
 
+@njit(cache=True)
 def l_dot_3pn(e: float, eta: float) -> float:
     """Eq. (A4)"""
     ef = 1.0 - e * e
@@ -2236,6 +2297,7 @@ def l_dot_3pn(e: float, eta: float) -> float:
     return pre * (t0 + t2 + t4 + np.sqrt(ef) * (r0 + r2 + r4))
 
 
+@njit(cache=True)
 def l_dot_3pn_SS(e: float, m1: float, m2: float, S1z: float, S2z: float) -> float:
     """3PN SS (Quentin Henry et al., arXiv:2308.13606v1)"""
     kappa1 = 1.0
@@ -2280,6 +2342,7 @@ def l_dot_3pn_SS(e: float, m1: float, m2: float, S1z: float, S2z: float) -> floa
 # =========== phi_dot (dphi/dt) terms =====================================================
 
 
+@njit(cache=True)
 def cosu_factor(e: float, u: float) -> float:
     return e * np.cos(u) - 1.0
 
@@ -2287,6 +2350,7 @@ def cosu_factor(e: float, u: float) -> float:
 ## --------- 0PN -------------
 
 
+@njit(cache=True)
 def phi_dot_0pn(e: float, eta: float, u: float) -> float:
     """Eq. (A11)"""
     cf = cosu_factor(e, u)
@@ -2296,6 +2360,7 @@ def phi_dot_0pn(e: float, eta: float, u: float) -> float:
 ## --------- 1PN -------------
 
 
+@njit(cache=True)
 def phi_dot_1pn(e: float, eta: float, u: float) -> float:
     """Eq. (A12)"""
     cf = cosu_factor(e, u)
@@ -2305,6 +2370,7 @@ def phi_dot_1pn(e: float, eta: float, u: float) -> float:
 ## --------- 1.5PN -------------
 
 
+@njit(cache=True)
 def phi_dot_1_5_pnSO_ecc(
     e: float, m1: float, m2: float, S1z: float, S2z: float, u: float
 ) -> float:
@@ -2320,6 +2386,7 @@ def phi_dot_1_5_pnSO_ecc(
 ## --------- 2PN -------------
 
 
+@njit(cache=True)
 def phi_dot_2pn(e: float, eta: float, u: float) -> float:
     """Eq. (A13)"""
     cf = cosu_factor(e, u)
@@ -2364,6 +2431,7 @@ def phi_dot_2pn(e: float, eta: float, u: float) -> float:
     )
 
 
+@njit(cache=True)
 def phi_dot_2_pnSS_ecc(
     e: float, m1: float, m2: float, S1z: float, S2z: float, u: float
 ) -> float:
@@ -2382,6 +2450,7 @@ def phi_dot_2_pnSS_ecc(
 ## --------- 2.5PN -------------
 
 
+@njit(cache=True)
 def phi_dot_2_5pn_SO(
     e: float, m1: float, m2: float, S1z: float, S2z: float, u: float
 ) -> float:
@@ -2485,6 +2554,7 @@ def phi_dot_2_5pn_SO(
 ## --------- 3PN -------------
 
 
+@njit(cache=True)
 def phi_dot_3pn(e: float, eta: float, u: float) -> float:
     u_factor = cosu_factor(e, u)
     u_factor_pow_7 = u_factor**7
@@ -2783,6 +2853,7 @@ def phi_dot_3pn(e: float, eta: float, u: float) -> float:
     )
 
 
+@njit(cache=True)
 def phi_dot_3pn_SS(
     e: float, m1: float, m2: float, S1z: float, S2z: float, u: float
 ) -> float:
@@ -3292,11 +3363,13 @@ def phi_dot_3pn_SS(
 
 
 ## ------- 4PN & 4.5PN---------------
+@njit(cache=True)
 def phi_dot_4pn_SS(e: float, m1: float, m2: float, S1z: float, S2z: float) -> float:
     """4PN SS phi_dot — returns 0 (same as active code in original)."""
     return 0.0
 
 
+@njit(cache=True)
 def phi_dot_4_5_pn(e: float, eta: float, x: float) -> float:
     """4.5PN phi_dot — returns 0."""
     return 0.0
@@ -3307,6 +3380,7 @@ def phi_dot_4_5_pn(e: float, eta: float, x: float) -> float:
 ## ---------- 0PN --------------------
 
 
+@njit(cache=True)
 def rel_sep_0pn(e: float, u: float) -> float:
     return 1.0 - e * np.cos(u)
 
@@ -3314,6 +3388,7 @@ def rel_sep_0pn(e: float, u: float) -> float:
 ## ---------- 1PN --------------------
 
 
+@njit(cache=True)
 def rel_sep_1pn(e: float, u: float, eta: float) -> float:
     ef = 1.0 - e * e
     b1 = 2.0 * (1.0 - e * np.cos(u)) / ef
@@ -3324,6 +3399,7 @@ def rel_sep_1pn(e: float, u: float, eta: float) -> float:
 ## ---------- 1.5PN --------------------
 
 
+@njit(cache=True)
 def rel_sep_1_5pn(
     e: float, u: float, m1: float, m2: float, S1z: float, S2z: float
 ) -> float:
@@ -3350,6 +3426,7 @@ def rel_sep_1_5pn(
 ## ---------- 2PN --------------------
 
 
+@njit(cache=True)
 def rel_sep_2pn(e: float, u: float, eta: float) -> float:
     eta2 = eta * eta
     e2 = e * e
@@ -3371,6 +3448,7 @@ def rel_sep_2pn(e: float, u: float, eta: float) -> float:
     return n1 / d1 + n2 / d2
 
 
+@njit(cache=True)
 def rel_sep_2pnSS(
     e: float, u: float, m1: float, m2: float, S1z: float, S2z: float
 ) -> float:
@@ -3386,6 +3464,7 @@ def rel_sep_2pnSS(
 ## ---------- 2.5PN --------------------
 
 
+@njit(cache=True)
 def rel_sep_2_5pn_SO(
     e: float, u: float, m1: float, m2: float, S1z: float, S2z: float
 ) -> float:
@@ -3447,6 +3526,7 @@ def rel_sep_2_5pn_SO(
 ## ---------- 3PN --------------------
 
 
+@njit(cache=True)
 def rel_sep_3pn(e: float, u: float, eta: float) -> float:
     pi_pow_2 = np.pi * np.pi
 
@@ -3558,6 +3638,7 @@ def rel_sep_3pn(e: float, u: float, eta: float) -> float:
     return numerator / denominator
 
 
+@njit(cache=True)
 def rel_sep_3pn_SS(
     e: float, u: float, m1: float, m2: float, S1z: float, S2z: float
 ) -> float:
@@ -3811,6 +3892,7 @@ def rel_sep_3pn_SS(
     return r_3pn_SS
 
 
+@njit(cache=True)
 def separation(
     u: float,
     eta: float,
@@ -3839,6 +3921,7 @@ def separation(
 # ================== ODE right-hand-side dispatchers ==========================
 
 
+@njit(cache=True)
 def dx_dt(
     radiation_pn_order: int,
     eta: float,
@@ -3848,6 +3931,7 @@ def dx_dt(
     S2z: float,
     x: float,
     e: float,
+    x_dot_4pn_SF_val: float,
 ) -> float:
 
     x2 = x * x
@@ -3895,7 +3979,7 @@ def dx_dt(
             + x_dot_4pnSO(e, eta, m1, m2, S1z, S2z)
             + x_dot_4pnSS(e, eta, m1, m2, S1z, S2z)
         ) * (x2 * x2)
-        # inst += x_dot_4pn_SF(e, eta, S1z) * (x2 * x2)
+        # inst += x_dot_4pn_SF_val * (x2 * x2)
 
     if radiation_pn_order >= 9:
         inst += x_dot_4_5_pn(e, eta, x) * (x2 * x2) * sqx
@@ -3927,6 +4011,7 @@ def dx_dt(
     return result
 
 
+@njit(cache=True)
 def de_dt(
     radiation_pn_order: int,
     eta: float,
@@ -4005,6 +4090,7 @@ def de_dt(
     return result
 
 
+@njit(cache=True)
 def dl_dt(
     eta: float, m1: float, m2: float, S1z: float, S2z: float, x: float, e: float
 ) -> float:
@@ -4022,6 +4108,7 @@ def dl_dt(
     ) * x32
 
 
+@njit(cache=True)
 def dphi_dt(
     u: float,
     eta: float,
@@ -4051,18 +4138,22 @@ def dphi_dt(
 # ================== Kepler equation solvers ==========================
 
 
+@njit(cache=True)
 def pow1_3(x):
     return x ** (1.0 / 3.0)
 
 
+@njit(cache=True)
 def pow3(x):
     return x * x * x
 
 
+@njit(cache=True)
 def pow5(x):
     return x * x * x * x * x
 
 
+@njit(cache=True)
 def mikkola_finder(eccentricity, mean_anomaly):
     """
     Solves Kepler's equation using Mikkola's method for an initial guess.
@@ -4100,6 +4191,7 @@ def mikkola_finder(eccentricity, mean_anomaly):
     return ecc_anomaly * sgn_mean_anomaly
 
 
+@njit(cache=True)
 def pn_kepler_equation(eta, x, e, l):
     """
     3PN accurate Kepler equation solver using Newton's method.
@@ -4148,18 +4240,15 @@ def pn_kepler_equation(eta, x, e, l):
 
 # ================== ODE system for eccentric models ==========================
 
-def eccentric_x_model_odes(t, y, params, phidot_only=False):
+
+@njit(cache=True)
+def eccentric_x_model_odes(
+    t, y, eta, m1, m2, S1z, S2z, radiation_pn_order, x_dot_4pn_SF_val
+):
     """
     ODE system for eccentric gravitational wave models.
     y = [x, e, l, phi]
     """
-    # Assuming params is an object or dictionary
-    eta = params.eta
-    m1 = params.m1
-    m2 = params.m2
-    S1z = params.S1z
-    S2z = params.S2z
-    radiation_pn_order = params.radiation_pn_order
 
     # Input variables
     x, e, l = y[0], y[1], y[2]
@@ -4170,15 +4259,17 @@ def eccentric_x_model_odes(t, y, params, phidot_only=False):
     dydt = [0.0, 0.0, 0.0, 0.0]
 
     if abs(e) > 1e-12:
-        if phidot_only: return dphi_dt(u, eta, m1, m2, S1z, S2z, x, e)
-        dydt[0] = dx_dt(radiation_pn_order, eta, m1, m2, S1z, S2z, x, e)
+        dydt[0] = dx_dt(
+            radiation_pn_order, eta, m1, m2, S1z, S2z, x, e, x_dot_4pn_SF_val
+        )
         dydt[1] = de_dt(radiation_pn_order, eta, m1, m2, S1z, S2z, x, e)
         dydt[2] = dl_dt(eta, m1, m2, S1z, S2z, x, e)
         dydt[3] = dphi_dt(u, eta, m1, m2, S1z, S2z, x, e)
     else:
         # zero eccentricity limit (arXiv:0909.0066)
-        if phidot_only: return x * np.sqrt(x)
-        dydt[0] = dx_dt(radiation_pn_order, eta, m1, m2, S1z, S2z, x, e)
+        dydt[0] = dx_dt(
+            radiation_pn_order, eta, m1, m2, S1z, S2z, x, e, x_dot_4pn_SF_val
+        )
         dydt[1] = de_dt(radiation_pn_order, eta, m1, m2, S1z, S2z, x, e)
         dydt[2] = dl_dt(eta, m1, m2, S1z, S2z, x, e)
         dydt[3] = x * np.sqrt(x)

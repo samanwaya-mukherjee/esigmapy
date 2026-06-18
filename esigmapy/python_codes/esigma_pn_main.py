@@ -1,9 +1,12 @@
 # Translated from LALSimESIGMA.c by Samanwaya Mukherjee, 2026
 
+import sys
 import numpy as np
-from scipy.integrate import solve_ivp
 from scipy.interpolate import CubicSpline
+from numba import njit, cfunc, carray
+from numbalsoda import lsoda_sig, lsoda, dop853
 import math
+from numba import njit
 from .esigma_pn_inspiral import *
 from .esigma_go_terms import *
 import lal
@@ -16,6 +19,175 @@ LAL_MRSUN_SI = lal.MRSUN_SI #1.476625061404649e3   # solar mass in metres
 RadiationPNOrderDefault = 8  # Default radiation reaction PN order (3PN)
 
 import os
+
+
+@cfunc(lsoda_sig)
+def rhs_cfunc(t, u, du, p):
+    params = carray(p, (8,))
+    eta_val = params[0]
+    m1_val = params[1]
+    m2_val = params[2]
+    S1z_val = params[3]
+    S2z_val = params[4]
+    rad_pn_order_val = int(params[5])
+    x_dot_4pn_SF_val = params[6]
+    x_final = params[7]
+
+    # Smoothly cap x to x_final to prevent domain errors (like sqrt(negative)) past ISCO,
+    # while keeping the derivative continuous (it will just be constant past x_final).
+    u_eval = np.empty(4, dtype=np.float64)
+    u_eval[0] = u[0] if u[0] < x_final else x_final
+    u_eval[1] = u[1]
+    u_eval[2] = u[2]
+    u_eval[3] = u[3]
+
+    dydt = eccentric_x_model_odes(
+        t,
+        u_eval,
+        eta_val,
+        m1_val,
+        m2_val,
+        S1z_val,
+        S2z_val,
+        rad_pn_order_val,
+        x_dot_4pn_SF_val,
+    )
+
+    du[0] = dydt[0]
+    du[1] = dydt[1]
+    du[2] = dydt[2]
+    du[3] = dydt[3]
+
+
+@njit(cache=True)
+def integrate_to_isco_numbalsoda(funcptr, y0, params_array, dt, x_final, max_samples, ode_eps):
+    chunk_size = 1024
+
+    t_arr = np.empty(max_samples, dtype=np.float64)
+    y_arr = np.empty((max_samples, 4), dtype=np.float64)
+
+    t_arr[0] = 0.0
+    y_arr[0, 0] = y0[0]
+    y_arr[0, 1] = y0[1]
+    y_arr[0, 2] = y0[2]
+    y_arr[0, 3] = y0[3]
+
+    t_curr = 0.0
+    u_curr = y0.copy()
+
+    idx = 1
+    bad_number = False
+
+    while idx < max_samples:
+        t_eval = np.empty(chunk_size + 1, dtype=np.float64)
+        for i in range(chunk_size + 1):
+            t_eval[i] = t_curr + i * dt
+
+        usol, success = lsoda(
+            funcptr,
+            u_curr,
+            t_eval,
+            data=params_array,
+            rtol=ode_eps,
+            atol=ode_eps,
+            mxstep=5000000,
+        )
+
+        if not success:
+            bad_number = True
+            break
+
+        crossed = False
+        for i in range(1, chunk_size + 1):
+            t_arr[idx] = t_eval[i]
+            y_arr[idx, 0] = usol[i, 0]
+            y_arr[idx, 1] = usol[i, 1]
+            y_arr[idx, 2] = usol[i, 2]
+            y_arr[idx, 3] = usol[i, 3]
+
+            if np.isnan(usol[i, 0]) or np.isnan(usol[i, 1]):
+                bad_number = True
+                crossed = True
+                break
+
+            idx += 1
+            if usol[i, 0] >= x_final:
+                crossed = True
+                break
+
+        if crossed:
+            break
+
+        u_curr = usol[-1].copy()
+        t_curr = t_eval[-1]
+
+    return t_arr[:idx], y_arr[:idx], bad_number
+
+@njit(cache=True)
+def integrate_to_isco_numbalsoda_dop853(funcptr, y0, params_array, dt, x_final, max_samples, ode_eps):
+    chunk_size = 1024
+
+    t_arr = np.empty(max_samples, dtype=np.float64)
+    y_arr = np.empty((max_samples, 4), dtype=np.float64)
+
+    t_arr[0] = 0.0
+    y_arr[0, 0] = y0[0]
+    y_arr[0, 1] = y0[1]
+    y_arr[0, 2] = y0[2]
+    y_arr[0, 3] = y0[3]
+
+    t_curr = 0.0
+    u_curr = y0.copy()
+
+    idx = 1
+    bad_number = False
+
+    while idx < max_samples:
+        t_eval = np.empty(chunk_size + 1, dtype=np.float64)
+        for i in range(chunk_size + 1):
+            t_eval[i] = t_curr + i * dt
+
+        usol, success = dop853(
+            funcptr,
+            u_curr,
+            t_eval,
+            data=params_array,
+            rtol=ode_eps,
+            atol=ode_eps,
+            mxstep=5000000,
+        )
+
+        if not success:
+            bad_number = True
+            break
+
+        crossed = False
+        for i in range(1, chunk_size + 1):
+            t_arr[idx] = t_eval[i]
+            y_arr[idx, 0] = usol[i, 0]
+            y_arr[idx, 1] = usol[i, 1]
+            y_arr[idx, 2] = usol[i, 2]
+            y_arr[idx, 3] = usol[i, 3]
+
+            if np.isnan(usol[i, 0]) or np.isnan(usol[i, 1]):
+                bad_number = True
+                crossed = True
+                break
+
+            idx += 1
+            if usol[i, 0] >= x_final:
+                crossed = True
+                break
+
+        if crossed:
+            break
+
+        u_curr = usol[-1].copy()
+        t_curr = t_eval[-1]
+
+    return t_arr[:idx], y_arr[:idx], bad_number
+
+
 
 # from dataclasses import dataclass, field
 
@@ -37,8 +209,26 @@ class Params:
 
 
 # ------------------------------------------------------------------ #
-# compute_mode_from_dynamics
+# 1.  JIT Helpers
 # ------------------------------------------------------------------ #
+
+
+@njit(cache=True)
+def compute_state_arrays(x_arr, e_arr, l_arr, eta, mass1, mass2, S1z, S2z):
+    n = len(x_arr)
+    u_arr = np.empty(n, dtype=np.float64)
+    r_arr = np.empty(n, dtype=np.float64)
+    phi_dot_arr = np.empty(n, dtype=np.float64)
+    for i in range(n):
+        ui = pn_kepler_equation(eta, x_arr[i], e_arr[i], l_arr[i])
+        ri = separation(ui, eta, x_arr[i], e_arr[i], mass1, mass2, S1z, S2z)
+        u_arr[i] = ui
+        r_arr[i] = ri
+        phi_dot_arr[i] = dphi_dt(ui, eta, mass1, mass2, S1z, S2z, x_arr[i], e_arr[i])
+    return u_arr, r_arr, phi_dot_arr
+
+
+@njit(cache=True)
 def compute_mode_from_dynamics(
     l: int,
     m: int,
@@ -66,7 +256,7 @@ def compute_mode_from_dynamics(
     # kv = _build_kepler_vars(eta, total_mass, S1z, S2z)
 
     length = len(x_vec)
-    h_lm = np.zeros(length, dtype=complex)
+    h_lm = np.zeros(length, dtype=np.complex128)
 
     for i in range(length):
         # populate_kepler_params(
@@ -260,6 +450,7 @@ def x_model_eccbbh_inspiral_waveform(
     L_MIN: int,
     L_MAX: int,
     mode_pn_order: int,
+    integrator: str = "lsoda",
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Drive the full esigma inspiral:
@@ -279,6 +470,7 @@ def x_model_eccbbh_inspiral_waveform(
         mean_anom_init,
         ode_eps,
         sampling_rate,
+        integrator,
     )
 
     # --- Step 2: strain from dynamics ------------------------------- #
@@ -314,6 +506,7 @@ def inspiral_esigma_dynamics(
     solve_ivp_method = "RK45", # method for solve_ivp module
     rad_pn_order = 8, # Radiation PN order
     inspiral_end_radius = 4.0, # Inspiral end radius (in units of total mass)   
+    integrator="lsoda",
 ):
     """
     Compute ESIGMA orbital dynamics via ODE integration, then interpolate
@@ -365,47 +558,39 @@ def inspiral_esigma_dynamics(
     dt_sec = 1.0 / sampling_rate  # seconds
     dt = dt_sec / (total_mass * LAL_MTSUN_SI)  # geometric (M)
 
+    # Precompute the 4PN Self-Force term (constant over integration)
+    from esigmapy.python_codes.esigma_pn_inspiral import x_dot_4pn_SF
+
+    x_dot_4pn_SF_val = x_dot_4pn_SF(e_init, eta, S1z)
+
     # ------------------------------------------------------------------ #
     # Initial conditions  y = [x, e, l (mean anomaly), phi]
     # ------------------------------------------------------------------ #
 
     y0 = np.array([x_init, e_init, mean_anom_init, 0.0])
 
-    # Define the ODE system as a function of (t, y)
-    def rhs(t, y):
-        return eccentric_x_model_odes(t, y, params)
-
     MAX_SAMPLES = (
         2048 * 16384
     )  # maximum number of samples to prevent infinite loops; adjust as needed
 
-    # =========== ODE solver using solve_ivp (LSODA)=========================#
+    # =========== ODE solver using numbalsoda =========================#
 
-    # --- define the termination condition as an event function ---#
-    def isco_event(t, y):
-        return y[0] - x_final  # stop when x >= x_final
+    params_array = np.array(
+        [eta, mass1, mass2, S1z, S2z, rad_pn_order, x_dot_4pn_SF_val, x_final],
+        dtype=np.float64,
+    )
 
-    isco_event.terminal = True
-    isco_event.direction = 1
-    t_max = MAX_SAMPLES * dt
-    # -----------------------------------
-    sol = solve_ivp(
-                        rhs,
-                        (0.0, t_max),   # large upper bound; event will stop earlier
-                        y0,
-                        method=solve_ivp_method,
-                        rtol=ode_eps,
-                        atol=abs_tol,
-                        # max_step=dt,
-                        events=isco_event,
-                    )
-    t_arr = sol.t
-    y_arr = sol.y.T  # shape (N, 4)
+    if integrator not in ["lsoda", "dop853"]:
+        raise ValueError("Invalid integrator. Must be 'lsoda' or 'dop853'")
 
-    # NaN / Inf guard (equivalent to your check)
-    bad_number = False
-    if not np.all(np.isfinite(y_arr)):
-        bad_number = True
+    if integrator == "lsoda":
+        t_arr, y_arr, bad_number = integrate_to_isco_numbalsoda(
+            rhs_cfunc.address, y0, params_array, dt, x_final, MAX_SAMPLES, ode_eps
+        )
+    else:
+        t_arr, y_arr, bad_number = integrate_to_isco_numbalsoda_dop853(
+            rhs_cfunc.address, y0, params_array, dt, x_final, MAX_SAMPLES, ode_eps
+        )
 
     # Unpack variables
     x_arr = y_arr[:, 0]
@@ -413,14 +598,9 @@ def inspiral_esigma_dynamics(
     l_arr = y_arr[:, 2]
     phi_arr = y_arr[:, 3]
 
-    u_arr = np.empty_like(x_arr)
-    r_arr = np.empty_like(x_arr)
-
-    for i, (x, e, l) in enumerate(zip(x_arr, e_arr, l_arr)):
-        ui = pn_kepler_equation(eta, x, e, l)
-        ri = separation(ui, eta, x, e, mass1, mass2, S1z, S2z)
-        u_arr[i] = ui
-        r_arr[i] = ri
+    u_arr, r_arr, phi_dot_arr = compute_state_arrays(
+        x_arr, e_arr, l_arr, eta, mass1, mass2, S1z, S2z
+    )
 
     final_i = len(t_arr)
     if final_i < 4:
@@ -433,39 +613,22 @@ def inspiral_esigma_dynamics(
     # ------------------------------------------------------------------ #
     # Uniform-grid interpolation
     # ------------------------------------------------------------------ #
-    t_final = t_arr[-1]
-    Length = int(math.ceil(t_final / dt))
+    # Since numbalsoda natively returns exactly dt-spaced points,
+    # we don't need any CubicSpline interpolation for state variables!
 
-    if Length < 2:
-        raise RuntimeError("Output length < 2; waveform too short.")
+    uniform_x = x_arr
+    uniform_phi = phi_arr
+    uniform_phi_dot = phi_dot_arr
+    uniform_r = r_arr
+    uniform_e = e_arr
+    uniform_l = l_arr
 
-    uniform_t = np.arange(Length) * dt  # [0, dt, 2·dt, …]
-
-    def interp_uniform(t_raw, y_raw):
-        cs = CubicSpline(t_raw, y_raw)
-        return cs(uniform_t)
-
-    def interp_deriv_uniform(t_raw, y_raw):
-        cs = CubicSpline(t_raw, y_raw)
-        return cs(uniform_t, 1)   # first derivative
-    
-    phi_dot_arr = np.array([
-                            eccentric_x_model_odes(t, y, params, phidot_only=True)
-                            for t, y in zip(t_arr, y_arr)
-                                ])
-
-    uniform_phi_dot = interp_uniform(t_arr, phi_dot_arr)
-
-    uniform_x       = interp_uniform(t_arr, x_arr)
-    uniform_phi     = interp_uniform(t_arr, phi_arr)
-    # uniform_phi_dot = interp_deriv_uniform(t_arr, phi_arr)
-    uniform_r       = interp_uniform(t_arr, r_arr)
-    uniform_r_dot   = interp_deriv_uniform(t_arr, r_arr)
-    uniform_e       = interp_uniform(t_arr, e_arr)
-    uniform_l       = interp_uniform(t_arr, l_arr)
+    # For r_dot, we can compute the derivative of the uniform array
+    cs_r = CubicSpline(t_arr, r_arr)
+    uniform_r_dot = cs_r(t_arr, 1)
 
     # Convert time back to seconds for the caller
-    uniform_t_sec = uniform_t * (total_mass * LAL_MTSUN_SI)
+    uniform_t_sec = t_arr * (total_mass * LAL_MTSUN_SI)
 
     return {
         "time_evol": uniform_t_sec,
