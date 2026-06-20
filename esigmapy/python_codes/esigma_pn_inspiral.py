@@ -1820,103 +1820,84 @@ def e_rad_hereditary_3(e: float, eta: float, x: float) -> float:
 
 @njit(cache=True)
 def e_dot_3pn(e: float, eta: float, x: float) -> float:
+    """Eq. (B5d) of Ebersold et al. — direct translation of LALSimESIGMA_PNInspiral.c"""
     if abs(e) < 1e-12:
         return 0.0
 
-    eta_pow_2 = eta * eta
-    eta_pow_3 = eta_pow_2 * eta
+    eta2 = eta * eta
+    e2 = e * e
+    e4 = e2 * e2
+    e6 = e4 * e2
+    e8 = e6 * e2
+    ef = 1.0 - e2
+    efsqrt = np.sqrt(ef)
+    pi2 = np.pi * np.pi
 
-    e_pow_2 = e * e
-    e_pow_4 = e_pow_2 * e_pow_2
-    e_pow_6 = e_pow_4 * e_pow_2
-    e_pow_8 = e_pow_6 * e_pow_2
+    pre = -e * eta / (ef * ef * ef * ef * ef * efsqrt)
 
-    e_fact = 1.0 - e_pow_2
-    sqrt_e_fact = np.sqrt(e_fact)
-
-    pi_pow_2 = np.pi * np.pi
-
-    zero_term = (
-        7742634967.0 / 891000.0
-        + (43386337.0 / 113400.0 + 1017.0 * pi_pow_2 / 10.0) * eta
-        - 4148897.0 * eta_pow_2 / 2520.0
-        - 61001.0 * eta_pow_3 / 486.0
-    )
-
-    e_2_term = e_pow_2 * (
-        6556829759.0 / 891000.0
-        + (770214901.0 / 25200.0 - 15727.0 * pi_pow_2 / 192.0) * eta
-        - 80915371.0 * eta_pow_2 / 15120.0
-        - 86910509.0 * eta_pow_3 / 19440.0
-    )
-
-    e_4_term = e_pow_4 * (
-        -17072216761.0 / 2376000.0
-        + (8799500893.0 / 907200.0 - 295559.0 * pi_pow_2 / 1920.0) * eta
-        + 351962207.0 * eta_pow_2 / 20160.0
-        - 2223241.0 * eta_pow_3 / 180.0
-    )
-
-    e_6_term = e_pow_6 * (
-        17657772379.0 / 3696000.0
-        + (-91818931.0 / 10080.0 - 6519.0 * pi_pow_2 / 640.0) * eta
-        + 2495471.0 * eta_pow_2 / 252.0
-        - 11792069.0 * eta_pow_3 / 2430.0
-    )
-
-    e_8_term = e_pow_8 * (
-        302322169.0 / 1774080.0
-        - 1921387.0 * eta / 10080.0
-        + 41179.0 * eta_pow_2 / 216.0
-        - 193396.0 * eta_pow_3 / 1215.0
-    )
-
-    zero_rt = (
-        -22713049.0 / 15750.0
-        + (-5526991.0 / 945.0 + 8323.0 * pi_pow_2 / 180.0) * eta
-        + 54332.0 * eta_pow_2 / 45.0
-    )
-
-    e_2_rt = e_pow_2 * (
-        89395687.0 / 7875.0
-        + (-38295557.0 / 1260.0 + 94177.0 * pi_pow_2 / 960.0) * eta
-        + 681989.0 * eta_pow_2 / 90.0
-    )
-
-    e_4_rt = e_pow_4 * (
-        5321445613.0 / 378000.0
-        + (-26478311.0 / 1512.0 + 2501.0 * pi_pow_2 / 2880.0) * eta
-        + 225106.0 * eta_pow_2 / 45.0
-    )
-
-    e_6_rt = e_pow_6 * (
-        186961.0 / 336.0 - 289691.0 * eta / 504.0 + 3197.0 * eta_pow_2 / 18.0
-    )
-
-    free_term = 730168.0 / (23625.0 * (1.0 + sqrt_e_fact))
-
-    log_term = (
-        (304.0 / 15.0)
-        * (
-            82283.0 / 1995.0
-            + 297674.0 * e_pow_2 / 1995.0
-            + 1147147.0 * e_pow_4 / 15960.0
-            + 61311.0 * e_pow_6 / 21280.0
+    t_e8 = 25.0 * e8 * (
+        18490461597.0 - 8162698563.0 * efsqrt
+        + 176.0 * eta * (
+            27.0 * (-3872433.0 + 1921387.0 * efsqrt)
+            + 28.0 * eta * (
+                -45.0 * (2815.0 + 41179.0 * efsqrt)
+                + 1547168.0 * (1.0 + efsqrt) * eta
+            )
         )
-        * np.log(x * (1.0 + sqrt_e_fact) / (2.0 * e_fact))
     )
 
-    pre_factor = -e * eta / (e_fact**5 * sqrt_e_fact)
+    t_64 = 64.0 * (
+        -3.0 * (45406954567.0 + 45214190215.0 * efsqrt)
+        + 55.0 * (1.0 + efsqrt) * eta * (
+            1839419691.0
+            + 5.0 * eta * (28250883.0 + 8540140.0 * eta)
+            - 42232050.0 * pi2
+        )
+    )
 
-    return pre_factor * (
-        zero_term
-        + e_2_term
-        + e_4_term
-        + e_6_term
-        + e_8_term
-        + sqrt_e_fact * (zero_rt + e_2_rt + e_4_rt + e_6_rt)
-        + free_term
-        + log_term
+    t_e2 = 16.0 * e2 * (
+        -12.0 * (126022071521.0 + 117027704117.0 * efsqrt)
+        + 55.0 * eta * (
+            -288.0 * (31771481.0 + 4136526.0 * efsqrt)
+            + 90.0 * (10100935.0 - 8154617.0 * efsqrt) * eta
+            + 6083735630.0 * (1.0 + efsqrt) * eta2
+            + 38745.0 * (3265.0 + 1641.0 * efsqrt) * pi2
+        )
+    )
+
+    t_e4 = 12.0 * e4 * (
+        429883524894.0 - 702938620770.0 * efsqrt
+        + 55.0 * eta * (
+            -46370859158.0 + 8774742922.0 * efsqrt
+            - 90.0 * (253550327.0 + 406315863.0 * efsqrt) * eta
+            + 22410269280.0 * (1.0 + efsqrt) * eta2
+            + 12915.0 * (33553.0 + 19771.0 * efsqrt) * pi2
+        )
+    )
+
+    t_e6 = 4.0 * e6 * (
+        2616262495497.0 - 1598322429999.0 * efsqrt
+        + 275.0 * eta * (
+            -432.0 * (12599311.0 + 25205247.0 * efsqrt) * eta
+            + 5282846912.0 * (1.0 + efsqrt) * eta2
+            + 9.0 * (
+                -962621272.0 + 1155643608.0 * efsqrt
+                + 861.0 * (1553.0 + 1431.0 * efsqrt) * pi2
+            )
+        )
+    )
+
+    log_t = (
+        -40677120.0
+        * (24608.0 + 89024.0 * e2 + 42884.0 * e4 + 1719.0 * e6)
+        * (1.0 + efsqrt)
+        * np.log(((1.0 + efsqrt) * x) / (2.0 - 2.0 * e2))
+    )
+
+    return pre * (
+        -8.350702795147239e-10
+        * (t_e8 + t_64 + t_e2 + t_e4 + t_e6 + log_t)
+        / (1.0 + efsqrt)
     )
 
 
@@ -2337,6 +2318,59 @@ def l_dot_3pn_SS(e: float, m1: float, m2: float, S1z: float, S2z: float) -> floa
             * S2z
         )
     ) / (4.0 * (-1 + e2) ** 3 * M4)
+
+
+## ---------- 4PN -------------
+
+
+@njit(cache=True)
+def l_dot_4pn(e: float, eta: float) -> float:
+    """4PN mean anomaly rate (arXiv:2508.08618, supp_quasiKeplerialExpansionResults.m).
+    Translated from LALSimESIGMA_PNInspiral.c l_dot_4pn."""
+    e2 = e * e
+    e4 = e2 * e2
+    e6 = e4 * e2
+    ef = 1.0 - e2
+    ef_sqrt = np.sqrt(ef)
+    ef_pow_4_5 = ef * ef * ef * ef * ef_sqrt
+    eta2 = eta * eta
+    eta3 = eta2 * eta
+    pi2 = np.pi * np.pi
+
+    term_e6 = 8960.0 * e6 * (
+        -1080.0 * (-99.0 + 7.0 * ef_sqrt)
+        + 27.0 * (-3712.0 + 71.0 * ef_sqrt) * eta
+        - 945.0 * (-32.0 + 5.0 * ef_sqrt) * eta2
+        + 6422.0 * ef_sqrt * eta3
+    )
+    term_e2 = 12.0 * e2 * (
+        -241920.0 * (1130.0 + 261.0 * ef_sqrt)
+        + eta * (
+            384.0 * (874160.0 + 3031751.0 * ef_sqrt)
+            + 59745280.0 * ef_sqrt * eta2
+            - 315.0 * (2624.0 + 137381.0 * ef_sqrt) * pi2
+            + 120960.0 * eta * (-608.0 - 7222.0 * ef_sqrt + 205.0 * ef_sqrt * pi2)
+        )
+    )
+    term_e4 = 105.0 * e4 * (
+        -86400.0 * (-320.0 + 191.0 * ef_sqrt)
+        + eta * (
+            1536.0 * (-29072.0 + 30809.0 * ef_sqrt)
+            + 8018944.0 * ef_sqrt * eta2
+            + 9.0 * (20992.0 - 72961.0 * ef_sqrt) * pi2
+            + 288.0 * eta * (29952.0 - 119984.0 * ef_sqrt + 1107.0 * ef_sqrt * pi2)
+        )
+    )
+    term_e0 = 280.0 * (
+        51840.0 * (-40.0 + 13.0 * ef_sqrt)
+        + eta * (
+            5566464.0 - 9343104.0 * ef_sqrt
+            + 100352.0 * ef_sqrt * eta2
+            + 9.0 * (-3936.0 + 26777.0 * ef_sqrt) * pi2
+            + 288.0 * eta * (-3648.0 - 34504.0 * ef_sqrt + 1353.0 * ef_sqrt * pi2)
+        )
+    )
+    return (term_e6 + term_e2 + term_e4 + term_e0) / (7.74144e6 * ef_pow_4_5)
 
 
 # =========== phi_dot (dphi/dt) terms =====================================================
@@ -4094,7 +4128,7 @@ def de_dt(
 def dl_dt(
     eta: float, m1: float, m2: float, S1z: float, S2z: float, x: float, e: float
 ) -> float:
-    """dl/dt — 3PN accurate with spin corrections."""
+    """dl/dt — 4PN accurate with spin corrections (matches LALSimESIGMA C code)."""
     x32 = np.sqrt(x) * x
     return (
         1.0
@@ -4105,6 +4139,7 @@ def dl_dt(
         + l_dot_2_5pn_SO(e, m1, m2, S1z, S2z) * x32 * x
         + x**3 * l_dot_3pn(e, eta)
         + x**3 * l_dot_3pn_SS(e, m1, m2, S1z, S2z)
+        + l_dot_4pn(e, eta) * x**4
     ) * x32
 
 
