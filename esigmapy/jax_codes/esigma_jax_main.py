@@ -46,16 +46,20 @@ _MODE_PN_ORDER_DEFAULT = 8
 # ---------------------------------------------------------------------------
 
 
-def estimate_T_max_jax(x_init: float, eta: float, safety: float = 4.0) -> float:
+def estimate_T_max_jax(
+    x_init: float, eta: float, x_final: float = 0.25, safety: float = 1.5
+) -> float:
     """
     Analytical upper bound on the inspiral duration in geometric units (M=1).
 
-    Leading-order (0PN) Peters formula:
-        T ~ (5/256) * (1/eta) * x_init^{-4}
+    Uses leading-order (0PN) Peters formula for time from x_init to x_final:
+        T ~ (5/256) * (1/eta) * (x_init^{-4} - x_final^{-4})
 
     Multiplied by ``safety`` to cover higher-PN corrections.
     """
-    return safety * (5.0 / 256.0) / (eta * x_init**4)
+    T_init = (5.0 / 256.0) / (eta * x_init**4)
+    T_final = (5.0 / 256.0) / (eta * x_final**4)
+    return safety * (T_init - T_final)
 
 
 # ---------------------------------------------------------------------------
@@ -74,19 +78,14 @@ def _make_rhs(rad_pn_order: int, vpnorder: int, x_final: float):
 
     def rhs(t, y, args):
         eta, m1, m2, S1z, S2z = args
-        x, e, l, phi = y[0], y[1], y[2], y[3]
-        # Smoothly cap x at x_final (mirrors the C / numba implementation)
+        x = y[0]
         past_isco = x >= x_final
-        # Cap x so the ODE terms don't blow up beyond ISCO
-        x_capped = jnp.where(past_isco, x_final, x)
-        y_capped = jnp.array([x_capped, e, l, phi])
+        y_capped = y.at[0].set(jnp.where(past_isco, x_final, x))
         dydt = eccentric_x_model_odes_jax(
             t,
             y_capped,
             (eta, m1, m2, S1z, S2z, rad_pn_order, vpnorder),
         )
-        # Freeze all derivatives once ISCO is reached so the adaptive solver
-        # can take large steps through the post-ISCO portion of the time grid.
         return jnp.where(past_isco, jnp.zeros_like(dydt), dydt)
 
     return rhs
@@ -166,7 +165,7 @@ def integrate_esigma_dynamics_jax(
         saveat=diffrax.SaveAt(ts=t_arr),
         stepsize_controller=diffrax.PIDController(rtol=ode_rtol, atol=ode_atol),
         max_steps=max_steps,
-        adjoint=diffrax.RecursiveCheckpointAdjoint(),
+        adjoint=diffrax.DirectAdjoint(),
     )
 
     return t_arr, sol.ys
@@ -243,7 +242,7 @@ def inspiral_esigma_dynamics_jax(
     dt_sec = 1.0 / sampling_rate
     dt_M = dt_sec / (total_mass * LAL_MTSUN_SI)
 
-    T_max_M = estimate_T_max_jax(x_init, eta)
+    T_max_M = estimate_T_max_jax(x_init, eta, x_final)
 
     y0 = jnp.array([x_init, e_init, mean_anom_init, 0.0])
 
