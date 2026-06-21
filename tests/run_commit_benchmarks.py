@@ -45,7 +45,12 @@ def generate_params(n_points=20):
 
 
 def run_single_system_wrapper(args):
-    p, integrator = args
+    if len(args) == 4:
+        p, integrator, ode_eps, mode_pn_order = args
+    else:
+        p, integrator = args
+        ode_eps = 1e-12
+        mode_pn_order = 8
     import time
     import numpy as np
     import lal
@@ -64,7 +69,7 @@ def run_single_system_wrapper(args):
     }
 
     if integrator == "C":
-        import esigmapy.generator as c_gen
+        import esigmapy.inspiral.lalsimulation_backend.generator as c_gen
         import lalsimulation as ls
 
         # Warmup
@@ -118,20 +123,30 @@ def run_single_system_wrapper(args):
                     distance_m,
                 )
             times_modes.append(time.perf_counter() - start)
-    else:
-        from esigmapy.python_codes.generator_python import get_inspiral_esigma_modes_py
-        from esigmapy.python_codes.esigma_pn_main import (
-            inspiral_esigma_dynamics,
-            inspiral_esigma_mode_from_dynamics,
+    elif integrator == "JAX":
+        import os
+        os.environ.setdefault("JAX_PLATFORMS", "cpu")
+        from esigmapy.inspiral.jax_backend.generator import (
+            get_inspiral_esigma_modes_jax,
+            inspiral_esigma_dynamics_jax,
+            compute_mode_from_dynamics_jax,
         )
 
-        # Warmup
+        jax_kw = {
+            "mass1": kwargs["mass1"], "mass2": kwargs["mass2"],
+            "f_lower": kwargs["f_lower"], "delta_t": kwargs["delta_t"],
+            "spin1z": kwargs["spin1z"], "spin2z": kwargs["spin2z"],
+            "eccentricity": kwargs["eccentricity"],
+            "mean_anomaly": kwargs["mean_anomaly"],
+            "distance": kwargs["distance"],
+            "modes_to_use": [(2, 2), (3, 3), (4, 4)],
+            "ode_eps": ode_eps,
+        }
+
+        # JIT warmup
         try:
-            try:
-                get_inspiral_esigma_modes_py(**kwargs, integrator=integrator)
-            except TypeError:
-                get_inspiral_esigma_modes_py(**kwargs)
-        except Exception as e:
+            get_inspiral_esigma_modes_jax(**jax_kw)
+        except Exception:
             pass
 
         times_full = []
@@ -140,38 +155,116 @@ def run_single_system_wrapper(args):
 
         for _ in range(2):
             start = time.perf_counter()
-            try:
-                get_inspiral_esigma_modes_py(**kwargs, integrator=integrator)
-            except TypeError:
-                get_inspiral_esigma_modes_py(**kwargs)
+            get_inspiral_esigma_modes_jax(**jax_kw)
             times_full.append(time.perf_counter() - start)
 
             start = time.perf_counter()
-            try:
-                retval = inspiral_esigma_dynamics(
-                    kwargs["mass1"],
-                    kwargs["mass2"],
-                    kwargs["spin1z"],
-                    kwargs["spin2z"],
-                    kwargs["eccentricity"],
-                    kwargs["f_lower"],
-                    kwargs["mean_anomaly"],
-                    1e-12,
-                    1.0 / kwargs["delta_t"],
-                    integrator=integrator,
+            dyn = inspiral_esigma_dynamics_jax(
+                kwargs["mass1"], kwargs["mass2"], kwargs["spin1z"], kwargs["spin2z"],
+                kwargs["eccentricity"], kwargs["f_lower"], kwargs["mean_anomaly"],
+                ode_eps, 1.0 / kwargs["delta_t"],
+            )
+            times_dyn.append(time.perf_counter() - start)
+
+            distance_m = kwargs["distance"] * 1e6 * lal.PC_SI
+            start = time.perf_counter()
+            for el, em in [(2, 2), (3, 3), (4, 4), (2, -2), (3, -3), (4, -4)]:
+                compute_mode_from_dynamics_jax(
+                    el, em, dyn["x_evol"], dyn["phi_evol"], dyn["phi_dot_evol"],
+                    dyn["r_evol"], dyn["r_dot_evol"],
+                    kwargs["mass1"], kwargs["mass2"],
+                    kwargs["spin1z"], kwargs["spin2z"], distance_m, mode_pn_order,
                 )
-            except TypeError:
-                retval = inspiral_esigma_dynamics(
-                    kwargs["mass1"],
-                    kwargs["mass2"],
-                    kwargs["spin1z"],
-                    kwargs["spin2z"],
-                    kwargs["eccentricity"],
-                    kwargs["f_lower"],
-                    kwargs["mean_anomaly"],
-                    1e-12,
-                    1.0 / kwargs["delta_t"],
+            times_modes.append(time.perf_counter() - start)
+
+    elif integrator == "numba:jax":
+        import os
+        os.environ.setdefault("JAX_PLATFORMS", "cpu")
+        from esigmapy.inspiral.numba_backend.pn_main import inspiral_esigma_dynamics
+        from esigmapy.inspiral.jax_backend.generator import compute_mode_from_dynamics_jax
+
+        # Warmup numba dynamics
+        try:
+            inspiral_esigma_dynamics(
+                kwargs["mass1"], kwargs["mass2"], kwargs["spin1z"], kwargs["spin2z"],
+                kwargs["eccentricity"], kwargs["f_lower"], kwargs["mean_anomaly"],
+                ode_eps, 1.0 / kwargs["delta_t"], integrator="dop853",
+            )
+        except Exception:
+            pass
+
+        # Warmup JAX modes
+        dyn = inspiral_esigma_dynamics(
+            kwargs["mass1"], kwargs["mass2"], kwargs["spin1z"], kwargs["spin2z"],
+            kwargs["eccentricity"], kwargs["f_lower"], kwargs["mean_anomaly"],
+            ode_eps, 1.0 / kwargs["delta_t"], integrator="dop853",
+        )
+        distance_m = kwargs["distance"] * 1e6 * lal.PC_SI
+        for el, em in [(2, 2), (3, 3), (4, 4), (2, -2), (3, -3), (4, -4)]:
+            compute_mode_from_dynamics_jax(
+                el, em, dyn["x_evol"], dyn["phi_evol"], dyn["phi_dot_evol"],
+                dyn["r_evol"], dyn["r_dot_evol"],
+                kwargs["mass1"], kwargs["mass2"],
+                kwargs["spin1z"], kwargs["spin2z"], distance_m, mode_pn_order,
+            )
+
+        times_full = []
+        times_dyn = []
+        times_modes = []
+
+        for _ in range(2):
+            start = time.perf_counter()
+            dyn = inspiral_esigma_dynamics(
+                kwargs["mass1"], kwargs["mass2"], kwargs["spin1z"], kwargs["spin2z"],
+                kwargs["eccentricity"], kwargs["f_lower"], kwargs["mean_anomaly"],
+                ode_eps, 1.0 / kwargs["delta_t"], integrator="dop853",
+            )
+            times_dyn.append(time.perf_counter() - start)
+
+            distance_m = kwargs["distance"] * 1e6 * lal.PC_SI
+            start = time.perf_counter()
+            for el, em in [(2, 2), (3, 3), (4, 4), (2, -2), (3, -3), (4, -4)]:
+                compute_mode_from_dynamics_jax(
+                    el, em, dyn["x_evol"], dyn["phi_evol"], dyn["phi_dot_evol"],
+                    dyn["r_evol"], dyn["r_dot_evol"],
+                    kwargs["mass1"], kwargs["mass2"],
+                    kwargs["spin1z"], kwargs["spin2z"], distance_m, mode_pn_order,
                 )
+            times_modes.append(time.perf_counter() - start)
+            times_full.append(times_dyn[-1] + times_modes[-1])
+
+    else:
+        from esigmapy.inspiral.numba_backend.generator import get_inspiral_esigma_modes_py
+        from esigmapy.inspiral.numba_backend.pn_main import (
+            inspiral_esigma_dynamics,
+            inspiral_esigma_mode_from_dynamics,
+        )
+
+        # Warmup
+        try:
+            get_inspiral_esigma_modes_py(
+                **kwargs, integrator=integrator, ode_eps=ode_eps, mode_pn_order=mode_pn_order,
+            )
+        except Exception:
+            pass
+
+        times_full = []
+        times_dyn = []
+        times_modes = []
+
+        for _ in range(2):
+            start = time.perf_counter()
+            get_inspiral_esigma_modes_py(
+                **kwargs, integrator=integrator, ode_eps=ode_eps, mode_pn_order=mode_pn_order,
+            )
+            times_full.append(time.perf_counter() - start)
+
+            start = time.perf_counter()
+            retval = inspiral_esigma_dynamics(
+                kwargs["mass1"], kwargs["mass2"], kwargs["spin1z"], kwargs["spin2z"],
+                kwargs["eccentricity"], kwargs["f_lower"], kwargs["mean_anomaly"],
+                ode_eps, 1.0 / kwargs["delta_t"], integrator=integrator,
+            )
             times_dyn.append(time.perf_counter() - start)
 
             t_arr = np.asarray(retval["time_evol"])
@@ -185,19 +278,9 @@ def run_single_system_wrapper(args):
             start = time.perf_counter()
             for el, em in [(2, 2), (3, 3), (4, 4), (2, -2), (3, -3), (4, -4)]:
                 inspiral_esigma_mode_from_dynamics(
-                    el,
-                    em,
-                    t_arr,
-                    x_arr,
-                    phi_arr,
-                    phidot_arr,
-                    r_arr,
-                    rdot_arr,
-                    kwargs["mass1"],
-                    kwargs["mass2"],
-                    kwargs["spin1z"],
-                    kwargs["spin2z"],
-                    distance_m,
+                    el, em, t_arr, x_arr, phi_arr, phidot_arr, r_arr, rdot_arr,
+                    kwargs["mass1"], kwargs["mass2"],
+                    kwargs["spin1z"], kwargs["spin2z"], distance_m, mode_pn_order,
                 )
             times_modes.append(time.perf_counter() - start)
 
@@ -227,10 +310,12 @@ def worker_main():
 
     out_file = sys.argv[2]
     integrator = sys.argv[3] if len(sys.argv) > 3 else "lsoda"
+    ode_eps = float(sys.argv[4]) if len(sys.argv) > 4 else 1e-12
+    mode_pn_order = int(sys.argv[5]) if len(sys.argv) > 5 else 8
 
-    print(f"Warming up JIT for {integrator}...")
+    print(f"Warming up JIT for {integrator} (ode_eps={ode_eps})...")
     sys.stdout.flush()
-    run_single_system_wrapper((params_list[0], integrator))
+    run_single_system_wrapper((params_list[0], integrator, ode_eps, mode_pn_order))
 
     existing_results = []
     if os.path.exists(out_file):
@@ -240,14 +325,18 @@ def worker_main():
     pending_params = []
     for p in params_list:
         if not any(params_match(p, e) for e in existing_results):
-            pending_params.append((p, integrator))
+            pending_params.append((p, integrator, ode_eps, mode_pn_order))
 
     if len(pending_params) > 0:
-        print(f"Running benchmarks over {len(pending_params)} systems in parallel...")
-        sys.stdout.flush()
-
-        with multiprocessing.Pool() as pool:
-            results = pool.map(run_single_system_wrapper, pending_params)
+        if integrator in ("JAX", "numba:jax"):
+            print(f"Running benchmarks over {len(pending_params)} systems sequentially ({integrator})...")
+            sys.stdout.flush()
+            results = [run_single_system_wrapper(a) for a in pending_params]
+        else:
+            print(f"Running benchmarks over {len(pending_params)} systems in parallel...")
+            sys.stdout.flush()
+            with multiprocessing.Pool() as pool:
+                results = pool.map(run_single_system_wrapper, pending_params)
 
         existing_results.extend(results)
 
@@ -380,10 +469,11 @@ def main():
         nargs="*",
         default=[
             "93c92f1178b85b5f9b00d6f62e9914cf4e052ed8:lsoda",
-            "2859aabab918b331fdcf3359990427b45a38d1ec:lsoda",
             "HEAD:dop853",
             "HEAD:lsoda",
             "HEAD:C",
+            "HEAD:JAX",
+            "HEAD:numba:jax",
         ],
         help="List of <commit>:<integrator> to benchmark",
     )
@@ -391,6 +481,18 @@ def main():
         "--plot-only",
         action="store_true",
         help="Only generate figures from existing results data, without running any profiling tests.",
+    )
+    parser.add_argument(
+        "--ode-eps",
+        type=float,
+        default=1e-12,
+        help="ODE tolerance for all backends (default: 1e-12).",
+    )
+    parser.add_argument(
+        "--mode-pn-order",
+        type=int,
+        default=8,
+        help="PN order for waveform modes (default: 8).",
     )
 
     args = parser.parse_args()
@@ -444,6 +546,8 @@ def main():
                             ROOT_DIR, f"speed_test_results_{commit}_{integrator}.json"
                         ),
                         integrator,
+                        str(args.ode_eps),
+                        str(args.mode_pn_order),
                     ],
                     check=True,
                     env=env,
