@@ -577,8 +577,13 @@ def main():
                 )
                 if len(subject) > 30:
                     subject = subject[:27] + "..."
+                display_integrator = integrator
+                if integrator == "numba:jax":
+                    display_integrator = "numba(dop853)+jax(vmap)"
+                elif integrator == "JAX":
+                    display_integrator = "jax(diffrax+vmap)"
                 labels[f"{commit}:{integrator}"] = (
-                    f"{commit[:7]} ({subject}) [{integrator}]"
+                    f"{commit[:7]} [{display_integrator}]"
                 )
             except:
                 labels[f"{commit}:{integrator}"] = f"{commit[:7]} [{integrator}]"
