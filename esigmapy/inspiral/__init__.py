@@ -38,6 +38,18 @@ def _get_backend_module(name):
     return mod
 
 
+def _inject_config_defaults(kwargs, backend_name):
+    """Inject ode_eps from global config if not explicitly provided.
+    Skipped for the surrogate backend (no ODE integration)."""
+    if backend_name == "surrogate":
+        return kwargs
+    if "ode_eps" not in kwargs:
+        from ..config import get_config
+        kwargs = dict(kwargs)
+        kwargs["ode_eps"] = get_config().ode_eps
+    return kwargs
+
+
 def get_modes(mass1, mass2, f_lower, delta_t, *, backend=None, **kwargs):
     """Generate inspiral GW modes.
 
@@ -60,6 +72,7 @@ def get_modes(mass1, mass2, f_lower, delta_t, *, backend=None, **kwargs):
     dict : mapping (l, m) -> complex array
     """
     dyn_back, modes_back = _resolve_backend(backend)
+    kwargs = _inject_config_defaults(kwargs, dyn_back)
     if dyn_back == modes_back:
         return _get_backend_module(dyn_back).get_modes(
             mass1, mass2, f_lower, delta_t, **kwargs
@@ -82,6 +95,7 @@ def get_dynamics(mass1, mass2, f_lower, delta_t, *, backend=None, **kwargs):
                     phi_evol, phi_dot_evol, r_evol, r_dot_evol
     """
     dyn_back, _ = _resolve_backend(backend)
+    kwargs = _inject_config_defaults(kwargs, dyn_back)
     return _get_backend_module(dyn_back).get_dynamics(
         mass1, mass2, f_lower, delta_t, **kwargs
     )
@@ -95,6 +109,7 @@ def get_waveform(mass1, mass2, f_lower, delta_t, *, backend=None, **kwargs):
     tuple : (h_plus, h_cross) arrays
     """
     dyn_back, modes_back = _resolve_backend(backend)
+    kwargs = _inject_config_defaults(kwargs, dyn_back)
     if dyn_back == modes_back:
         return _get_backend_module(dyn_back).get_waveform(
             mass1, mass2, f_lower, delta_t, **kwargs
