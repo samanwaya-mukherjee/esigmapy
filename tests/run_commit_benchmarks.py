@@ -8,6 +8,7 @@ import os
 ROOT_DIR = os.environ.get(
     "ESIGMAPY_ROOT_DIR", os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 )
+RESULTS_DIR = os.path.join(ROOT_DIR, "profiling_results")
 sys.path.insert(0, ROOT_DIR)
 import shutil
 import time
@@ -396,7 +397,7 @@ def plot_results(commits_data_map, labels):
         plt.grid(True)
         plt.tight_layout()
         plt.savefig(
-            os.path.join(ROOT_DIR, f"figs2/generation_times_vs_mass_{metric}.png")
+            os.path.join(RESULTS_DIR, f"generation_times_vs_mass_{metric}.png")
         )
 
         # Plot speedups
@@ -452,7 +453,7 @@ def plot_results(commits_data_map, labels):
         plt.grid(True)
         plt.tight_layout()
         plt.savefig(
-            os.path.join(ROOT_DIR, f"figs2/generation_speedups_vs_mass_{metric}.png")
+            os.path.join(RESULTS_DIR, f"generation_speedups_vs_mass_{metric}.png")
         )
 
 
@@ -497,7 +498,7 @@ def main():
 
     args = parser.parse_args()
 
-    os.makedirs(os.path.join(ROOT_DIR, "figs2"), exist_ok=True)
+    os.makedirs(RESULTS_DIR, exist_ok=True)
     generate_params(20)
 
     parsed_configs = []
@@ -543,7 +544,7 @@ def main():
                         "/tmp/run_worker.py",
                         "--worker",
                         os.path.join(
-                            ROOT_DIR, f"speed_test_results_{commit}_{integrator}.json"
+                            RESULTS_DIR, f"speed_test_results_{commit}_{integrator}.json"
                         ),
                         integrator,
                         str(args.ode_eps),
@@ -564,7 +565,7 @@ def main():
 
     for config in parsed_configs:
         commit, integrator = config
-        fpath = os.path.join(ROOT_DIR, f"speed_test_results_{commit}_{integrator}.json")
+        fpath = os.path.join(RESULTS_DIR, f"speed_test_results_{commit}_{integrator}.json")
         if os.path.exists(fpath):
             with open(fpath, "r") as f:
                 commits_data_map[f"{commit}:{integrator}"] = json.load(f)
@@ -589,7 +590,7 @@ def main():
                 labels[f"{commit}:{integrator}"] = f"{commit[:7]} [{integrator}]"
 
     # Also grab any other jsons in the directory that match the format
-    for fpath in glob.glob("speed_test_results_*_*.json"):
+    for fpath in glob.glob(os.path.join(RESULTS_DIR, "speed_test_results_*_*.json")):
         base = (
             os.path.basename(fpath)
             .replace("speed_test_results_", "")
@@ -619,7 +620,7 @@ def main():
                     labels[key] = f"{commit[:7]} [{integrator}]"
 
     plot_results(commits_data_map, labels)
-    print("Done! Plots saved in figs2/")
+    print(f"Done! Plots saved in {RESULTS_DIR}/")
 
 
 if __name__ == "__main__":
