@@ -13,6 +13,7 @@ class ESIGMAConfig:
     ode_eps: float = 1e-8
     rad_pn_order: int = 8
     mode_pn_order: int = 8
+    inspiral_end_radius: float = 4.0
 
 
 _config = ESIGMAConfig()
@@ -34,6 +35,8 @@ def configure(**kwargs):
         Default radiation-reaction PN order.
     mode_pn_order : int
         Default waveform mode PN order.
+    inspiral_end_radius : float
+        ISCO termination radius in units of total mass (default 4.0).
     """
     for k, v in kwargs.items():
         if not hasattr(_config, k):

@@ -39,14 +39,21 @@ def _get_backend_module(name):
 
 
 def _inject_config_defaults(kwargs, backend_name):
-    """Inject ode_eps from global config if not explicitly provided.
+    """Inject physics constants from global config if not explicitly provided.
     Skipped for the surrogate backend (no ODE integration)."""
     if backend_name == "surrogate":
         return kwargs
-    if "ode_eps" not in kwargs:
-        from ..config import get_config
-        kwargs = dict(kwargs)
-        kwargs["ode_eps"] = get_config().ode_eps
+    from ..config import get_config
+    cfg = get_config()
+    defaults = {
+        "ode_eps": cfg.ode_eps,
+        "rad_pn_order": cfg.rad_pn_order,
+        "mode_pn_order": cfg.mode_pn_order,
+        "inspiral_end_radius": cfg.inspiral_end_radius,
+    }
+    missing = {k: v for k, v in defaults.items() if k not in kwargs}
+    if missing:
+        kwargs = dict(kwargs, **missing)
     return kwargs
 
 

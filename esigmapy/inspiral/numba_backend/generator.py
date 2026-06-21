@@ -1122,26 +1122,28 @@ def get_dynamics(mass1, mass2, f_lower, delta_t, **kwargs):
         kwargs.get("mean_anomaly", 0.0),
         kwargs.get("ode_eps", 1e-11),
         1.0 / delta_t,
+        rad_pn_order=kwargs.get("rad_pn_order", 8),
+        inspiral_end_radius=kwargs.get("inspiral_end_radius", 4.0),
         integrator=kwargs.get("integrator", "dop853"),
     )
 
 
 def get_modes(mass1, mass2, f_lower, delta_t, **kwargs):
     """Generate inspiral GW modes using the numba backend."""
-    result = get_inspiral_esigma_modes_py(
-        mass1, mass2, f_lower, delta_t,
-        spin1z=kwargs.get("spin1z", 0.0),
-        spin2z=kwargs.get("spin2z", 0.0),
-        eccentricity=kwargs.get("eccentricity", 0.0),
-        mean_anomaly=kwargs.get("mean_anomaly", 0.0),
-        distance=kwargs.get("distance", 1.0),
-        modes_to_use=kwargs.get("modes_to_use", [(2, 2), (3, 3), (4, 4)]),
-        include_conjugate_modes=kwargs.get("include_conjugate_modes", True),
+    kw = dict(
+        spin1z=kwargs.pop("spin1z", 0.0),
+        spin2z=kwargs.pop("spin2z", 0.0),
+        eccentricity=kwargs.pop("eccentricity", 0.0),
+        mean_anomaly=kwargs.pop("mean_anomaly", 0.0),
+        distance=kwargs.pop("distance", 1.0),
+        modes_to_use=kwargs.pop("modes_to_use", [(2, 2), (3, 3), (4, 4)]),
+        include_conjugate_modes=kwargs.pop("include_conjugate_modes", True),
         return_pycbc_timeseries=False,
-        integrator=kwargs.get("integrator", "dop853"),
-        ode_eps=kwargs.get("ode_eps", 1e-11),
+        integrator=kwargs.pop("integrator", "dop853"),
+        ode_eps=kwargs.pop("ode_eps", 1e-11),
     )
-    # get_inspiral_esigma_modes_py returns (time_array, modes_dict)
+    kw.update(kwargs)  # pass remaining kwargs (rad_pn_order, mode_pn_order, etc.)
+    result = get_inspiral_esigma_modes_py(mass1, mass2, f_lower, delta_t, **kw)
     if isinstance(result, tuple):
         return result[1]
     return result
