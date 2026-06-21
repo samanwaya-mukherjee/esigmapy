@@ -345,6 +345,42 @@ def _compute_state_arrays_np(
 # ---------------------------------------------------------------------------
 
 
+def _make_vectorized_mode_kernel(l: int, m: int, vpnorder: int):
+    """Build a JIT-compiled, vmapped mode kernel for a given (l, m, vpnorder).
+
+    Returns a function: (r_vec, rdot_vec, phi_vec, phidot_vec, x_vec,
+                          total_mass, eta, R, S1z, S2z) -> h_lm_vec
+    """
+    from .esigma_jax_go_terms import generate_hlm_jax, CommonVars
+
+    @jax.jit
+    def _vectorized_kernel(r_vec, rdot_vec, phi_vec, phidot_vec, x_vec,
+                           total_mass, eta, R, S1z, S2z):
+        b0 = 2.0 * total_mass / jnp.exp(0.5)
+        logb0 = jnp.log(b0)
+        delta = jnp.sqrt(1.0 - 4.0 * eta)
+
+        def single_step(r, rDOT, Phi, PhiDOT, x):
+            params = CommonVars(
+                xp5=jnp.sqrt(x), logx=jnp.log(x),
+                b0=b0, r0=b0, logb0=logb0, logr0=logb0, delta=delta,
+            )
+            hlm = 0.0 + 0.0j
+            for pno in range(vpnorder, -1, -1):
+                hlm = hlm + generate_hlm_jax(
+                    l, m, total_mass, eta,
+                    r, rDOT, Phi, PhiDOT, R, pno, S1z, S2z, x, params,
+                )
+            return hlm
+
+        return jax.vmap(single_step)(r_vec, rdot_vec, phi_vec, phidot_vec, x_vec)
+
+    return _vectorized_kernel
+
+
+_MODE_KERNEL_CACHE: dict = {}
+
+
 def compute_mode_from_dynamics_jax(
     l: int,
     m: int,
@@ -362,6 +398,8 @@ def compute_mode_from_dynamics_jax(
 ) -> np.ndarray:
     """
     Compute the (l, m) GW mode h_lm from orbital dynamics arrays.
+
+    Uses jax.vmap to vectorize over all timesteps in a single JIT kernel.
 
     Parameters
     ----------
@@ -390,29 +428,27 @@ def compute_mode_from_dynamics_jax(
     -------
     h_lm : np.ndarray, complex128, shape (N,)
     """
-    from .esigma_jax_go_terms import hlmGOresult_jax  # deferred: Phase 5
-
     total_mass = mass1 + mass2
     eta = (mass1 * mass2) / total_mass**2
 
-    n = len(x_vec)
-    h_lm = np.zeros(n, dtype=np.complex128)
+    # Get or build the vectorized kernel for this (l, m, vpnorder)
+    key = (l, m, vpnorder)
+    if key not in _MODE_KERNEL_CACHE:
+        _MODE_KERNEL_CACHE[key] = _make_vectorized_mode_kernel(l, m, vpnorder)
+    kernel = _MODE_KERNEL_CACHE[key]
 
-    for i in range(n):
-        r_SI     = float(r_vec[i])     * total_mass
-        rdot_SI  = float(r_dot_vec[i])
-        phidot_SI = float(phi_dot_vec[i]) / total_mass
+    # Vectorized scaling (no Python loop)
+    r_scaled = jnp.asarray(r_vec) * total_mass
+    rdot_arr = jnp.asarray(r_dot_vec)
+    phi_arr = jnp.asarray(phi_vec)
+    phidot_scaled = jnp.asarray(phi_dot_vec) / total_mass
+    x_arr = jnp.asarray(x_vec)
 
-        h_lm[i] = (
-            hlmGOresult_jax(
-                l, m, total_mass, eta,
-                r_SI, rdot_SI, float(phi_vec[i]), phidot_SI,
-                R, vpnorder, S1z, S2z, float(x_vec[i]),
-            )
-            * LAL_MRSUN_SI
-        )
+    # ONE vectorized JIT call for all N timesteps
+    h_lm = kernel(r_scaled, rdot_arr, phi_arr, phidot_scaled, x_arr,
+                  total_mass, eta, R, S1z, S2z)
 
-    return h_lm
+    return np.asarray(h_lm * LAL_MRSUN_SI)
 
 
 # ---------------------------------------------------------------------------
