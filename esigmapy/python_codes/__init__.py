@@ -1,6 +1,5 @@
-# Import everything to esigmapy/python_codes' namespace
-
-from .esigma_go_terms import *
-from .esigma_pn_inspiral import *
-from .esigma_pn_main import *
-from .generator_python import *
+# Backward-compatibility shim — imports from the new location
+from esigmapy.inspiral.numba_backend.go_terms import *
+from esigmapy.inspiral.numba_backend.pn_inspiral import *
+from esigmapy.inspiral.numba_backend.pn_main import *
+from esigmapy.inspiral.numba_backend.generator import *

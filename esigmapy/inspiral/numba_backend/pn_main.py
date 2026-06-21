@@ -7,8 +7,8 @@ from numba import njit, cfunc, carray
 from numbalsoda import lsoda_sig, lsoda, dop853
 import math
 from numba import njit
-from .esigma_pn_inspiral import *
-from .esigma_go_terms import *
+from .pn_inspiral import *
+from .go_terms import *
 import lal
 
 # Constants (LAL equivalents)
@@ -580,7 +580,7 @@ def inspiral_esigma_dynamics(
     dt = dt_sec / (total_mass * LAL_MTSUN_SI)  # geometric (M)
 
     # Precompute the 4PN Self-Force term (constant over integration)
-    from esigmapy.python_codes.esigma_pn_inspiral import x_dot_4pn_SF
+    from .pn_inspiral import x_dot_4pn_SF
 
     x_dot_4pn_SF_val = x_dot_4pn_SF(e_init, eta, S1z)
 

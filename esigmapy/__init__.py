@@ -1,7 +1,9 @@
 from __future__ import absolute_import
 
-from . import blend, generator, mr_generator, legacy, utils
-from .generator import (
+from . import legacy, utils, condition, config
+from .config import configure, get_config
+
+from .inspiral.lalsimulation_backend.generator import (
     eccentricity_at_extremum_frequency,
     eccentricity_at_reference_frequency,
     get_imr_esigma_modes,
@@ -9,6 +11,8 @@ from .generator import (
     get_inspiral_esigma_modes,
     get_inspiral_esigma_waveform,
 )
+
+from .inspiral import get_modes, get_dynamics, get_waveform
 
 
 def get_version_information():

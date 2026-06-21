@@ -12,7 +12,7 @@ import jax
 import jax.numpy as jnp
 from functools import partial
 
-from .esigma_jax_kepler import solve_kepler_jax, separation_jax
+from .kepler import solve_kepler_jax, separation_jax
 
 # Physical / mathematical constants
 EULER_GAMMA = 0.5772156649015329

@@ -10,9 +10,9 @@ import esigmapy
 import lal
 import lalsimulation as ls
 import pycbc.types as pt
-from ..utils import f_ISCO_spin
-from .esigma_pn_main import *
-from ..generator import _get_transition_frequency_window
+from ...utils import f_ISCO_spin
+from .pn_main import *
+from ..lalsimulation_backend.generator import _get_transition_frequency_window
 
 ECCENTRICITY_LEVEL_ISCO_WARNING = 0.02
 ECCENTRICITY_LEVEL_ISCO_ERROR = 0.1

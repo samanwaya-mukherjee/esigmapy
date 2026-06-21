@@ -202,7 +202,7 @@ def lalsim_rhs_fd(m1, m2, S1z, S2z, ecc, f_lower, dt_fine_sec=1e-7, fd_order=1):
 def python_rhs(m1, m2, S1z, S2z, ecc, f_lower, rad_pn_order=8):
     import lal
 
-    from esigmapy.python_codes.esigma_pn_inspiral import (
+    from esigmapy.inspiral.numba_backend.pn_inspiral import (
         eccentric_x_model_odes,
         x_dot_4pn_SF,
     )
@@ -234,12 +234,12 @@ def jax_rhs(m1, m2, S1z, S2z, ecc, f_lower, rad_pn_order=8):
     try:
         import jax
 
-        jax.config.update("jax_enable_x64", True)
-        import jax.numpy as jnp
-        import lal
-        from esigmapy.jax_codes.esigma_jax_inspiral import eccentric_x_model_odes_jax
-    except (ImportError, ModuleNotFoundError):
-        return None
+    jax.config.update("jax_enable_x64", True)
+    import jax.numpy as jnp
+
+    import lal
+
+    from esigmapy.inspiral.jax_backend.inspiral import eccentric_x_model_odes_jax
 
     total_mass = m1 + m2
     eta = (m1 * m2) / total_mass**2

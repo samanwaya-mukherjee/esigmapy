@@ -10,9 +10,9 @@ import esigmapy
 import lal
 import lalsimulation as ls
 import pycbc.types as pt
-from .utils import f_ISCO_spin
-from .condition import apply_taper_both_pols
-from .mr_generator import check_available_mr_approximants, get_mr_modes
+from ...utils import f_ISCO_spin
+from ...condition import apply_taper_both_pols
+from ...post_inspiral.mr_generator import check_available_mr_approximants, get_mr_modes
 
 ECCENTRICITY_LEVEL_ISCO_WARNING = 0.02
 ECCENTRICITY_LEVEL_ISCO_ERROR = 0.1

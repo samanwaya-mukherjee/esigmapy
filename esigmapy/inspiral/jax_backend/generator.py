@@ -19,11 +19,11 @@ from functools import partial
 
 import diffrax
 
-from .esigma_jax_kepler import (
+from .kepler import (
     solve_kepler_jax,
     separation_jax,
 )
-from .esigma_jax_inspiral import (
+from .inspiral import (
     eccentric_x_model_odes_jax,
     dphi_dt_jax,
 )
@@ -350,7 +350,7 @@ def _make_vectorized_mode_kernel(l: int, m: int, vpnorder: int):
     Returns a function: (r_vec, rdot_vec, phi_vec, phidot_vec, x_vec,
                           total_mass, eta, R, S1z, S2z) -> h_lm_vec
     """
-    from .esigma_jax_go_terms import generate_hlm_jax, CommonVars
+    from .go_terms import generate_hlm_jax, CommonVars
 
     @jax.jit
     def _vectorized_kernel(r_vec, rdot_vec, phi_vec, phidot_vec, x_vec,

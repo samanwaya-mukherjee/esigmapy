@@ -9,13 +9,13 @@ import time
 import esigmapy
 import lal
 import pycbc.types as pt
-from esigmapy.utils import f_ISCO_spin
-from esigmapy.generator import (
+from ...utils import f_ISCO_spin
+from ..lalsimulation_backend.generator import (
     _get_transition_frequency_window,
     ECCENTRICITY_LEVEL_ISCO_WARNING,
     ECCENTRICITY_LEVEL_ISCO_ERROR,
 )
-from esigmapy.mr_generator import check_available_mr_approximants, get_mr_modes
+from ...post_inspiral.mr_generator import check_available_mr_approximants, get_mr_modes
 from .surrogate import _get_surrogate
 
 
