@@ -1219,3 +1219,70 @@ def get_imr_esigma_waveform(
     elif return_orbital_params:
         return hp, hc, orbital_vars_dict
     return hp, hc
+
+
+# ---------------------------------------------------------------------------
+# Standardized backend interface (used by esigmapy.inspiral dispatch)
+# ---------------------------------------------------------------------------
+
+
+def get_dynamics(mass1, mass2, f_lower, delta_t, **kwargs):
+    """Generate inspiral dynamics using the LALSim C backend."""
+    import lalsimulation as ls
+    import lal
+
+    retval = ls.SimInspiralESIGMADynamics(
+        mass1, mass2,
+        kwargs.get("spin1z", 0.0),
+        kwargs.get("spin2z", 0.0),
+        kwargs.get("eccentricity", 0.0),
+        f_lower,
+        kwargs.get("mean_anomaly", 0.0),
+        kwargs.get("ode_eps", 1e-12),
+        1.0 / delta_t,
+    )
+    total_mass = mass1 + mass2
+    t = np.array(retval[0].data.data) * total_mass * lal.MTSUN_SI
+    return {
+        "time_evol": t,
+        "x_evol": np.array(retval[1].data.data),
+        "eccentricity_evol": np.array(retval[2].data.data),
+        "mean_ano_evol": np.array(retval[3].data.data),
+        "phi_evol": np.array(retval[4].data.data),
+        "phi_dot_evol": np.array(retval[5].data.data),
+        "r_evol": np.array(retval[6].data.data),
+        "r_dot_evol": np.array(retval[7].data.data),
+    }
+
+
+def get_modes(mass1, mass2, f_lower, delta_t, **kwargs):
+    """Generate inspiral GW modes using the LALSim C backend."""
+    result = get_inspiral_esigma_modes(
+        mass1, mass2, f_lower, delta_t,
+        spin1z=kwargs.get("spin1z", 0.0),
+        spin2z=kwargs.get("spin2z", 0.0),
+        eccentricity=kwargs.get("eccentricity", 0.0),
+        mean_anomaly=kwargs.get("mean_anomaly", 0.0),
+        distance=kwargs.get("distance", 1.0),
+        modes_to_use=kwargs.get("modes_to_use", [(2, 2), (3, 3), (4, 4)]),
+        include_conjugate_modes=kwargs.get("include_conjugate_modes", True),
+        return_pycbc_timeseries=False,
+    )
+    if isinstance(result, tuple):
+        return result[1]
+    return result
+
+
+def get_waveform(mass1, mass2, f_lower, delta_t, **kwargs):
+    """Generate inspiral h_plus, h_cross using the LALSim C backend."""
+    return get_inspiral_esigma_waveform(
+        mass1, mass2, f_lower, delta_t,
+        spin1z=kwargs.get("spin1z", 0.0),
+        spin2z=kwargs.get("spin2z", 0.0),
+        eccentricity=kwargs.get("eccentricity", 0.0),
+        mean_anomaly=kwargs.get("mean_anomaly", 0.0),
+        distance=kwargs.get("distance", 1.0),
+        modes_to_use=kwargs.get("modes_to_use", [(2, 2), (3, 3), (4, 4)]),
+        include_conjugate_modes=kwargs.get("include_conjugate_modes", True),
+        return_pycbc_timeseries=False,
+    )

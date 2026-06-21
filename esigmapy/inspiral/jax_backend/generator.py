@@ -675,3 +675,128 @@ def get_inspiral_esigma_waveform_jax(
         h_cross -= (hlm * ylm).imag
 
     return h_plus, h_cross
+
+
+# ---------------------------------------------------------------------------
+# Standardized backend interface (used by esigmapy.inspiral dispatch)
+# ---------------------------------------------------------------------------
+
+
+def get_dynamics(mass1, mass2, f_lower, delta_t, **kwargs):
+    """Generate inspiral dynamics using the JAX backend."""
+    return inspiral_esigma_dynamics_jax(
+        mass1, mass2,
+        kwargs.get("spin1z", 0.0),
+        kwargs.get("spin2z", 0.0),
+        kwargs.get("eccentricity", 0.0),
+        f_lower,
+        kwargs.get("mean_anomaly", 0.0),
+        kwargs.get("ode_eps", 1e-8),
+        1.0 / delta_t,
+    )
+
+
+def get_modes(mass1, mass2, f_lower, delta_t, **kwargs):
+    """Generate inspiral GW modes using the JAX backend."""
+    return get_inspiral_esigma_modes_jax(
+        mass1, mass2, f_lower, delta_t,
+        spin1z=kwargs.get("spin1z", 0.0),
+        spin2z=kwargs.get("spin2z", 0.0),
+        eccentricity=kwargs.get("eccentricity", 0.0),
+        mean_anomaly=kwargs.get("mean_anomaly", 0.0),
+        distance=kwargs.get("distance", 1.0),
+        modes_to_use=kwargs.get("modes_to_use", [(2, 2), (3, 3), (4, 4)]),
+        include_conjugate_modes=kwargs.get("include_conjugate_modes", True),
+        ode_eps=kwargs.get("ode_eps", 1e-8),
+    )
+
+
+def get_waveform(mass1, mass2, f_lower, delta_t, **kwargs):
+    """Generate inspiral h_plus, h_cross using the JAX backend."""
+    return get_inspiral_esigma_waveform_jax(
+        mass1, mass2, f_lower, delta_t,
+        spin1z=kwargs.get("spin1z", 0.0),
+        spin2z=kwargs.get("spin2z", 0.0),
+        eccentricity=kwargs.get("eccentricity", 0.0),
+        mean_anomaly=kwargs.get("mean_anomaly", 0.0),
+        distance=kwargs.get("distance", 1.0),
+        modes_to_use=kwargs.get("modes_to_use", [(2, 2), (3, 3), (4, 4)]),
+        include_conjugate_modes=kwargs.get("include_conjugate_modes", True),
+        ode_eps=kwargs.get("ode_eps", 1e-8),
+    )
+
+
+def get_modes_from_dynamics(dyn, mass1, mass2, **kwargs):
+    """Compute GW modes from pre-computed dynamics using JAX vmap kernels."""
+    from ...config import get_config
+
+    distance = kwargs.get("distance", 1.0)
+    R = distance * 1e6 * float(LAL_PC_SI)
+    mode_pn_order = kwargs.get("mode_pn_order", 8)
+    modes_to_use = kwargs.get("modes_to_use", [(2, 2), (3, 3), (4, 4)])
+    include_conjugate_modes = kwargs.get("include_conjugate_modes", True)
+    n_max = kwargs.get("n_max", get_config().n_max)
+
+    if include_conjugate_modes:
+        full_modes = list(modes_to_use)
+        for el, em in modes_to_use:
+            if (el, -em) not in full_modes:
+                full_modes.append((el, -em))
+    else:
+        full_modes = list(modes_to_use)
+
+    x_vec = np.asarray(dyn["x_evol"])
+    phi_vec = np.asarray(dyn["phi_evol"])
+    phidot_vec = np.asarray(dyn["phi_dot_evol"])
+    r_vec = np.asarray(dyn["r_evol"])
+    rdot_vec = np.asarray(dyn["r_dot_evol"])
+    N_real = len(x_vec)
+
+    # Pad to n_max to avoid JIT recompilation for different array lengths
+    if n_max and N_real < n_max:
+        def _pad(arr):
+            out = np.zeros(n_max, dtype=arr.dtype)
+            out[:len(arr)] = arr
+            return out
+        x_vec = _pad(x_vec)
+        phi_vec = _pad(phi_vec)
+        phidot_vec = _pad(phidot_vec)
+        r_vec = _pad(r_vec)
+        rdot_vec = _pad(rdot_vec)
+
+    result = {}
+    for el, em in full_modes:
+        h = compute_mode_from_dynamics_jax(
+            el, em, x_vec, phi_vec, phidot_vec, r_vec, rdot_vec,
+            mass1, mass2,
+            kwargs.get("spin1z", 0.0),
+            kwargs.get("spin2z", 0.0),
+            R, mode_pn_order,
+        )
+        result[(el, em)] = h[:N_real]
+
+    return result
+
+
+def warmup(n_max=None, modes=None):
+    """Pre-compile JAX mode kernels to avoid JIT latency on first call.
+
+    Parameters
+    ----------
+    n_max : int, optional
+        Array size to compile for. Defaults to config.n_max.
+    modes : list of (l, m) tuples, optional
+        Modes to pre-compile. Defaults to (2,2),(2,-2),(3,3),(3,-3),(4,4),(4,-4).
+    """
+    from ...config import get_config
+
+    n_max = n_max or get_config().n_max
+    modes = modes or [(2, 2), (2, -2), (3, 3), (3, -3), (4, 4), (4, -4)]
+
+    dummy = np.ones(n_max, dtype=np.float64) * 0.05
+    R_dummy = 100.0 * 1e6 * float(LAL_PC_SI)
+    for el, em in modes:
+        compute_mode_from_dynamics_jax(
+            el, em, dummy, dummy, dummy, dummy, dummy,
+            20.0, 20.0, 0.0, 0.0, R_dummy, 8,
+        )
