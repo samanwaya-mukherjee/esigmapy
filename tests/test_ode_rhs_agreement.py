@@ -17,6 +17,7 @@ Usage:
     conda run -n lalsuite-dev python tests/test_ode_rhs_agreement.py --verbose
     conda run -n lalsuite-dev python tests/test_ode_rhs_agreement.py --tol 1e-4
 """
+
 import argparse
 import os
 import sys
@@ -34,26 +35,96 @@ import numpy as np
 # Test configurations — a mix of mass ratios, spins, and eccentricities
 # ---------------------------------------------------------------------------
 SYSTEMS = [
-    {"label": "equal-mass nonspinning e=0.3",
-     "m1": 20.0, "m2": 20.0, "S1z": 0.0,  "S2z": 0.0,  "ecc": 0.3,  "f_lower": 20.0},
-    {"label": "equal-mass nonspinning e=0.1",
-     "m1": 20.0, "m2": 20.0, "S1z": 0.0,  "S2z": 0.0,  "ecc": 0.1,  "f_lower": 20.0},
-    {"label": "equal-mass spinning e=0.2",
-     "m1": 15.0, "m2": 15.0, "S1z": 0.3,  "S2z": -0.2, "ecc": 0.2,  "f_lower": 20.0},
-    {"label": "unequal-mass nonspinning e=0.1",
-     "m1": 30.0, "m2": 10.0, "S1z": 0.0,  "S2z": 0.0,  "ecc": 0.1,  "f_lower": 15.0},
-    {"label": "unequal-mass spinning e=0.3",
-     "m1": 25.0, "m2": 8.0,  "S1z": 0.5,  "S2z": 0.1,  "ecc": 0.3,  "f_lower": 15.0},
-    {"label": "high-spin e=0.05",
-     "m1": 20.0, "m2": 20.0, "S1z": 0.7,  "S2z": -0.7, "ecc": 0.05, "f_lower": 20.0},
-    {"label": "low-ecc e=0.01",
-     "m1": 20.0, "m2": 15.0, "S1z": 0.0,  "S2z": 0.0,  "ecc": 0.01, "f_lower": 20.0},
-    {"label": "high-ecc e=0.5",
-     "m1": 20.0, "m2": 20.0, "S1z": 0.0,  "S2z": 0.0,  "ecc": 0.5,  "f_lower": 15.0},
-    {"label": "anti-aligned spins e=0.15",
-     "m1": 18.0, "m2": 12.0, "S1z": -0.4, "S2z": 0.4,  "ecc": 0.15, "f_lower": 20.0},
-    {"label": "heavy equal-mass e=0.2",
-     "m1": 40.0, "m2": 40.0, "S1z": 0.1,  "S2z": 0.1,  "ecc": 0.2,  "f_lower": 10.0},
+    {
+        "label": "equal-mass nonspinning e=0.3",
+        "m1": 20.0,
+        "m2": 20.0,
+        "S1z": 0.0,
+        "S2z": 0.0,
+        "ecc": 0.3,
+        "f_lower": 20.0,
+    },
+    {
+        "label": "equal-mass nonspinning e=0.1",
+        "m1": 20.0,
+        "m2": 20.0,
+        "S1z": 0.0,
+        "S2z": 0.0,
+        "ecc": 0.1,
+        "f_lower": 20.0,
+    },
+    {
+        "label": "equal-mass spinning e=0.2",
+        "m1": 15.0,
+        "m2": 15.0,
+        "S1z": 0.3,
+        "S2z": -0.2,
+        "ecc": 0.2,
+        "f_lower": 20.0,
+    },
+    {
+        "label": "unequal-mass nonspinning e=0.1",
+        "m1": 30.0,
+        "m2": 10.0,
+        "S1z": 0.0,
+        "S2z": 0.0,
+        "ecc": 0.1,
+        "f_lower": 15.0,
+    },
+    {
+        "label": "unequal-mass spinning e=0.3",
+        "m1": 25.0,
+        "m2": 8.0,
+        "S1z": 0.5,
+        "S2z": 0.1,
+        "ecc": 0.3,
+        "f_lower": 15.0,
+    },
+    {
+        "label": "high-spin e=0.05",
+        "m1": 20.0,
+        "m2": 20.0,
+        "S1z": 0.7,
+        "S2z": -0.7,
+        "ecc": 0.05,
+        "f_lower": 20.0,
+    },
+    {
+        "label": "low-ecc e=0.01",
+        "m1": 20.0,
+        "m2": 15.0,
+        "S1z": 0.0,
+        "S2z": 0.0,
+        "ecc": 0.01,
+        "f_lower": 20.0,
+    },
+    {
+        "label": "high-ecc e=0.5",
+        "m1": 20.0,
+        "m2": 20.0,
+        "S1z": 0.0,
+        "S2z": 0.0,
+        "ecc": 0.5,
+        "f_lower": 15.0,
+    },
+    {
+        "label": "anti-aligned spins e=0.15",
+        "m1": 18.0,
+        "m2": 12.0,
+        "S1z": -0.4,
+        "S2z": 0.4,
+        "ecc": 0.15,
+        "f_lower": 20.0,
+    },
+    {
+        "label": "heavy equal-mass e=0.2",
+        "m1": 40.0,
+        "m2": 40.0,
+        "S1z": 0.1,
+        "S2z": 0.1,
+        "ecc": 0.2,
+        "f_lower": 10.0,
+    },
 ]
 
 
@@ -65,7 +136,7 @@ def rel_diff(a, b):
 # ---------------------------------------------------------------------------
 # LALSim RHS via ultra-fine finite difference
 # ---------------------------------------------------------------------------
-def lalsim_rhs_fd(m1, m2, S1z, S2z, ecc, f_lower, dt_fine_sec=1e-7):
+def lalsim_rhs_fd(m1, m2, S1z, S2z, ecc, f_lower, dt_fine_sec=1e-7, fd_order=1):
     """Return (xdot, edot, ldot, phidot) at the initial state from LALSim,
     estimated via forward finite-difference at a very small dt."""
     import lalsimulation as ls
@@ -83,11 +154,43 @@ def lalsim_rhs_fd(m1, m2, S1z, S2z, ecc, f_lower, dt_fine_sec=1e-7):
 
     dt_geom = t[1] - t[0]  # geometric time step (M=1 units)
 
+    if fd_order == 1:
+        xdot = (x[1] - x[0]) / dt_geom
+        edot = (e[1] - e[0]) / dt_geom
+        ldot = (l[1] - l[0]) / dt_geom
+        phidot = (phi[1] - phi[0]) / dt_geom
+    elif fd_order == 2:
+        # 2nd-order forward difference: (-3*f(0) + 4*f(1) - f(2)) / (2*h)
+        def fd2(arr):
+            return (-3.0 * arr[0] + 4.0 * arr[1] - arr[2]) / (2.0 * dt_geom)
+
+        xdot = fd2(x)
+        edot = fd2(e)
+        ldot = fd2(l)
+        phidot = fd2(phi)
+    elif fd_order == 4:
+        # 4th-order forward difference: (-25*f(0) + 48*f(1) - 36*f(2) + 16*f(3) - 3*f(4)) / (12*h)
+        def fd4(arr):
+            return (
+                -25.0 * arr[0]
+                + 48.0 * arr[1]
+                - 36.0 * arr[2]
+                + 16.0 * arr[3]
+                - 3.0 * arr[4]
+            ) / (12.0 * dt_geom)
+
+        xdot = fd4(x)
+        edot = fd4(e)
+        ldot = fd4(l)
+        phidot = fd4(phi)
+    else:
+        raise ValueError("Invalid fd_order. Must be 1, 2, or 4.")
+
     return {
-        "xdot": (x[1] - x[0]) / dt_geom,
-        "edot": (e[1] - e[0]) / dt_geom,
-        "ldot": (l[1] - l[0]) / dt_geom,
-        "phidot": (phi[1] - phi[0]) / dt_geom,
+        "xdot": xdot,
+        "edot": edot,
+        "ldot": ldot,
+        "phidot": phidot,
         "x0": x[0],
         "dt_geom": dt_geom,
     }
@@ -128,14 +231,15 @@ def python_rhs(m1, m2, S1z, S2z, ecc, f_lower, rad_pn_order=8):
 # JAX RHS — direct evaluation
 # ---------------------------------------------------------------------------
 def jax_rhs(m1, m2, S1z, S2z, ecc, f_lower, rad_pn_order=8):
-    import jax
+    try:
+        import jax
 
-    jax.config.update("jax_enable_x64", True)
-    import jax.numpy as jnp
-
-    import lal
-
-    from esigmapy.jax_codes.esigma_jax_inspiral import eccentric_x_model_odes_jax
+        jax.config.update("jax_enable_x64", True)
+        import jax.numpy as jnp
+        import lal
+        from esigmapy.jax_codes.esigma_jax_inspiral import eccentric_x_model_odes_jax
+    except (ImportError, ModuleNotFoundError):
+        return None
 
     total_mass = m1 + m2
     eta = (m1 * m2) / total_mass**2
@@ -158,7 +262,7 @@ def jax_rhs(m1, m2, S1z, S2z, ecc, f_lower, rad_pn_order=8):
 # ---------------------------------------------------------------------------
 # Run comparison for a single system
 # ---------------------------------------------------------------------------
-def compare_system(sys_params, tol_py_jax, tol_vs_lalsim, verbose=False):
+def compare_system(sys_params, tol_py_jax, tol_vs_lalsim, fd_order=1, verbose=False):
     """Compare RHS across all three implementations. Returns (passed, details)."""
     label = sys_params["label"]
     m1, m2 = sys_params["m1"], sys_params["m2"]
@@ -167,9 +271,10 @@ def compare_system(sys_params, tol_py_jax, tol_vs_lalsim, verbose=False):
 
     py = python_rhs(m1, m2, S1z, S2z, ecc, f_lower)
     jx = jax_rhs(m1, m2, S1z, S2z, ecc, f_lower)
+    has_jax = jx is not None
 
     try:
-        lal_fd = lalsim_rhs_fd(m1, m2, S1z, S2z, ecc, f_lower)
+        lal_fd = lalsim_rhs_fd(m1, m2, S1z, S2z, ecc, f_lower, fd_order=fd_order)
         has_lalsim = True
     except Exception as exc:
         lal_fd = None
@@ -181,13 +286,17 @@ def compare_system(sys_params, tol_py_jax, tol_vs_lalsim, verbose=False):
     all_pass = True
 
     for f in fields:
-        rd_pj = rel_diff(py[f], jx[f])
-        ok_pj = rd_pj <= tol_py_jax
+        if has_jax:
+            rd_pj = rel_diff(py[f], jx[f])
+            ok_pj = rd_pj <= tol_py_jax
+        else:
+            rd_pj = None
+            ok_pj = True
 
         if has_lalsim:
             rd_pl = rel_diff(py[f], lal_fd[f])
-            rd_jl = rel_diff(jx[f], lal_fd[f])
-            ok_l = rd_pl <= tol_vs_lalsim and rd_jl <= tol_vs_lalsim
+            rd_jl = rel_diff(jx[f], lal_fd[f]) if has_jax else None
+            ok_l = rd_pl <= tol_vs_lalsim and (not has_jax or rd_jl <= tol_vs_lalsim)
         else:
             rd_pl = rd_jl = None
             ok_l = True  # skip LALSim check when unavailable
@@ -197,17 +306,24 @@ def compare_system(sys_params, tol_py_jax, tol_vs_lalsim, verbose=False):
             all_pass = False
 
         results[f] = {
-            "py": py[f], "jax": jx[f],
+            "py": py[f],
+            "jax": jx[f] if has_jax else None,
             "lal": lal_fd[f] if has_lalsim else None,
-            "rd_pj": rd_pj, "rd_pl": rd_pl, "rd_jl": rd_jl,
-            "ok_pj": ok_pj, "ok_l": ok_l, "passed": passed,
+            "rd_pj": rd_pj,
+            "rd_pl": rd_pl,
+            "rd_jl": rd_jl,
+            "ok_pj": ok_pj,
+            "ok_l": ok_l,
+            "passed": passed,
         }
 
     # Build output
     lines = []
     status = "PASS" if all_pass else "FAIL"
     lines.append(f"  [{status}] {label}")
-    lines.append(f"         m1={m1}, m2={m2}, S1z={S1z}, S2z={S2z}, e={ecc}, f={f_lower} Hz")
+    lines.append(
+        f"         m1={m1}, m2={m2}, S1z={S1z}, S2z={S2z}, e={ecc}, f={f_lower} Hz"
+    )
     lines.append(f"         x0 = {py['x0']:.10e}")
 
     if verbose or not all_pass:
@@ -224,11 +340,20 @@ def compare_system(sys_params, tol_py_jax, tol_vs_lalsim, verbose=False):
         for f in fields:
             r = results[f]
             mark = "  " if r["passed"] else "**"
-            line = f"  {mark}{f:>6} {r['py']:>16.8e} {r['jax']:>16.8e}"
-            if has_lalsim:
-                line += f" {r['lal']:>16.8e} {r['rd_pj']:>10.2e} {r['rd_pl']:>10.2e} {r['rd_jl']:>10.2e}"
+            if has_jax:
+                line = f"  {mark}{f:>6} {r['py']:>16.8e} {r['jax']:>16.8e}"
             else:
-                line += f" {r['rd_pj']:>10.2e}"
+                line = f"  {mark}{f:>6} {r['py']:>16.8e} {'None':>16}"
+            if has_lalsim:
+                if has_jax:
+                    line += f" {r['lal']:>16.8e} {r['rd_pj']:>10.2e} {r['rd_pl']:>10.2e} {r['rd_jl']:>10.2e}"
+                else:
+                    line += f" {r['lal']:>16.8e} {'None':>10} {r['rd_pl']:>10.2e} {'None':>10}"
+            else:
+                if has_jax:
+                    line += f" {r['rd_pj']:>10.2e}"
+                else:
+                    line += f" {'None':>10}"
             lines.append(line)
 
     if not has_lalsim:
@@ -257,41 +382,62 @@ def main():
         """),
     )
     parser.add_argument(
-        "-v", "--verbose", action="store_true",
+        "-v",
+        "--verbose",
+        action="store_true",
         help="Print per-field details for passing systems too.",
     )
     parser.add_argument(
-        "--tol-py-jax", type=float, default=1e-12,
+        "--tol-py-jax",
+        type=float,
+        default=1e-12,
         help="Relative tolerance for Python vs JAX (default: 1e-12).",
     )
     parser.add_argument(
-        "--tol-vs-lalsim", type=float, default=1e-3,
+        "--tol-vs-lalsim",
+        type=float,
+        default=1e-3,
         help="Relative tolerance for Python/JAX vs LALSim FD (default: 1e-3).",
+    )
+    parser.add_argument(
+        "--fd-order",
+        type=int,
+        choices=[1, 2, 4],
+        default=1,
+        help="Finite difference stencil order (1, 2, or 4). Default: 1.",
     )
     args = parser.parse_args()
 
     # Try to import LALSim — if unavailable, we still compare Python vs JAX
-    lalsim_path = os.environ.get("LALSIM_PYTHON_PATH",
-        "/home/prayush/local/lalsuite/esigma_github/lib/python3.13/site-packages")
+    lalsim_path = os.environ.get(
+        "LALSIM_PYTHON_PATH",
+        "/home/prayush/local/lalsuite/esigma_github/lib/python3.13/site-packages",
+    )
     if lalsim_path not in sys.path:
         sys.path.insert(0, lalsim_path)
 
     has_lalsim = True
     try:
         import lalsimulation as ls
+
         if not hasattr(ls, "SimInspiralESIGMADynamics"):
             has_lalsim = False
-            print("WARNING: lalsimulation found but SimInspiralESIGMADynamics not available.")
+            print(
+                "WARNING: lalsimulation found but SimInspiralESIGMADynamics not available."
+            )
             print("         LALSim comparisons will be skipped.\n")
     except ImportError:
         has_lalsim = False
-        print("WARNING: lalsimulation not importable. LALSim comparisons will be skipped.\n")
+        print(
+            "WARNING: lalsimulation not importable. LALSim comparisons will be skipped.\n"
+        )
 
     print("=" * 80)
     print("ODE RHS agreement test: LALSim C vs Python-numba vs JAX")
     print("=" * 80)
     print(f"  Python-JAX tolerance: {args.tol_py_jax:.0e}")
     print(f"  vs-LALSim tolerance:  {args.tol_vs_lalsim:.0e}")
+    print(f"  FD stencil order:     {args.fd_order}")
     print(f"  Systems to test:      {len(SYSTEMS)}")
     print(f"  LALSim available:     {has_lalsim}")
     print()
@@ -303,7 +449,11 @@ def main():
     for sys_params in SYSTEMS:
         try:
             passed, detail, results = compare_system(
-                sys_params, args.tol_py_jax, args.tol_vs_lalsim, args.verbose,
+                sys_params,
+                args.tol_py_jax,
+                args.tol_vs_lalsim,
+                fd_order=args.fd_order,
+                verbose=args.verbose,
             )
         except Exception as exc:
             passed = False
@@ -333,13 +483,25 @@ def main():
         print("\nWorst-case relative differences across all systems:")
         for f in ["xdot", "edot", "ldot", "phidot"]:
             worst_pj = max(
-                (r[f]["rd_pj"] for r in all_results.values() if f in r), default=0
-            )
-            worst_pl = max(
-                (r[f]["rd_pl"] for r in all_results.values() if f in r and r[f]["rd_pl"] is not None),
+                (
+                    r[f]["rd_pj"]
+                    for r in all_results.values()
+                    if f in r and r[f]["rd_pj"] is not None
+                ),
                 default=None,
             )
-            line = f"  {f:>6}  Py-JAX: {worst_pj:.2e}"
+            worst_pl = max(
+                (
+                    r[f]["rd_pl"]
+                    for r in all_results.values()
+                    if f in r and r[f]["rd_pl"] is not None
+                ),
+                default=None,
+            )
+            if worst_pj is not None:
+                line = f"  {f:>6}  Py-JAX: {worst_pj:.2e}"
+            else:
+                line = f"  {f:>6}  Py-JAX: None"
             if worst_pl is not None:
                 line += f"   Py-LALSim: {worst_pl:.2e}"
             print(line)
