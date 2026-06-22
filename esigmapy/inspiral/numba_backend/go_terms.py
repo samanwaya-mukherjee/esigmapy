@@ -2,6 +2,7 @@
 
 import numpy as np
 from collections import namedtuple
+
 # pyrefly: ignore [missing-import]
 from numba import njit
 

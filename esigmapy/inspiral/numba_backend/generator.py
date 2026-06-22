@@ -1114,7 +1114,8 @@ def get_imr_esigma_waveform_py(
 def get_dynamics(mass1, mass2, f_lower, delta_t, **kwargs):
     """Generate inspiral dynamics using the numba backend."""
     return inspiral_esigma_dynamics(
-        mass1, mass2,
+        mass1,
+        mass2,
         kwargs.get("spin1z", 0.0),
         kwargs.get("spin2z", 0.0),
         kwargs.get("eccentricity", 0.0),
@@ -1152,7 +1153,10 @@ def get_modes(mass1, mass2, f_lower, delta_t, **kwargs):
 def get_waveform(mass1, mass2, f_lower, delta_t, **kwargs):
     """Generate inspiral h_plus, h_cross using the numba backend."""
     return get_inspiral_esigma_waveform_py(
-        mass1, mass2, f_lower, delta_t,
+        mass1,
+        mass2,
+        f_lower,
+        delta_t,
         spin1z=kwargs.get("spin1z", 0.0),
         spin2z=kwargs.get("spin2z", 0.0),
         eccentricity=kwargs.get("eccentricity", 0.0),
@@ -1188,16 +1192,19 @@ def get_modes_from_dynamics(dyn, mass1, mass2, **kwargs):
     result = {}
     for el, em in full_modes:
         result[(el, em)] = inspiral_esigma_mode_from_dynamics(
-            el, em,
+            el,
+            em,
             np.asarray(dyn["time_evol"]),
             np.asarray(dyn["x_evol"]),
             np.asarray(dyn["phi_evol"]),
             np.asarray(dyn["phi_dot_evol"]),
             np.asarray(dyn["r_evol"]),
             np.asarray(dyn["r_dot_evol"]),
-            mass1, mass2,
+            mass1,
+            mass2,
             kwargs.get("spin1z", 0.0),
             kwargs.get("spin2z", 0.0),
-            R, mode_pn_order,
+            R,
+            mode_pn_order,
         )
     return result

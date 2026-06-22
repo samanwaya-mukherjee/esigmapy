@@ -44,6 +44,7 @@ def _inject_config_defaults(kwargs, backend_name):
     if backend_name == "surrogate":
         return kwargs
     from ..config import get_config
+
     cfg = get_config()
     defaults = {
         "ode_eps": cfg.ode_eps,

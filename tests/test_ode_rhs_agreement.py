@@ -231,8 +231,7 @@ def python_rhs(m1, m2, S1z, S2z, ecc, f_lower, rad_pn_order=8):
 # JAX RHS — direct evaluation
 # ---------------------------------------------------------------------------
 def jax_rhs(m1, m2, S1z, S2z, ecc, f_lower, rad_pn_order=8):
-    try:
-        import jax
+    import jax
 
     jax.config.update("jax_enable_x64", True)
     import jax.numpy as jnp

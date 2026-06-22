@@ -14,6 +14,8 @@ from esigmapy.generator import (
     eccentricity_at_reference_frequency,
 )
 
+_GENERATOR_MODULE = "esigmapy.inspiral.lalsimulation_backend.generator"
+
 # ---------------------------------------------------------------------------
 # Shared helpers for Tier 2 (LAL-mocked) tests
 # ---------------------------------------------------------------------------
@@ -259,31 +261,31 @@ class TestGetInspiralEsigmaModesWithMock:
 
     def test_returned_modes_contain_requested_key(self, ctx):
         n, dt, dyn, mode = ctx
-        with patch("esigmapy.generator.ls") as mock_ls:
+        with patch(f"{_GENERATOR_MODULE}.ls") as mock_ls:
             modes = self._call(mock_ls, dyn, mode, dt)
         assert (2, 2) in modes
 
     def test_conjugate_modes_added_when_flag_true(self, ctx):
         n, dt, dyn, mode = ctx
-        with patch("esigmapy.generator.ls") as mock_ls:
+        with patch(f"{_GENERATOR_MODULE}.ls") as mock_ls:
             modes = self._call(mock_ls, dyn, mode, dt, include_conjugate_modes=True)
         assert (2, -2) in modes
 
     def test_conjugate_modes_absent_when_flag_false(self, ctx):
         n, dt, dyn, mode = ctx
-        with patch("esigmapy.generator.ls") as mock_ls:
+        with patch(f"{_GENERATOR_MODULE}.ls") as mock_ls:
             modes = self._call(mock_ls, dyn, mode, dt, include_conjugate_modes=False)
         assert (2, -2) not in modes
 
     def test_returns_pycbc_timeseries_by_default(self, ctx):
         n, dt, dyn, mode = ctx
-        with patch("esigmapy.generator.ls") as mock_ls:
+        with patch(f"{_GENERATOR_MODULE}.ls") as mock_ls:
             modes = self._call(mock_ls, dyn, mode, dt)
         assert isinstance(modes[(2, 2)], pt.TimeSeries)
 
     def test_returns_numpy_array_when_not_pycbc(self, ctx):
         n, dt, dyn, mode = ctx
-        with patch("esigmapy.generator.ls") as mock_ls:
+        with patch(f"{_GENERATOR_MODULE}.ls") as mock_ls:
             t_arr, modes = self._call(
                 mock_ls, dyn, mode, dt, return_pycbc_timeseries=False
             )
@@ -292,7 +294,7 @@ class TestGetInspiralEsigmaModesWithMock:
     def test_distance_converted_from_mpc_to_si(self, ctx):
         n, dt, dyn, mode = ctx
         distance_mpc = 200.0
-        with patch("esigmapy.generator.ls") as mock_ls:
+        with patch(f"{_GENERATOR_MODULE}.ls") as mock_ls:
             self._call(mock_ls, dyn, mode, dt, distance=distance_mpc)
             passed_distance = mock_ls.SimInspiralESIGMAModeFromDynamics.call_args.args[
                 -1
@@ -303,7 +305,7 @@ class TestGetInspiralEsigmaModesWithMock:
 
     def test_mode_generation_called_once_per_mode(self, ctx):
         n, dt, dyn, mode = ctx
-        with patch("esigmapy.generator.ls") as mock_ls:
+        with patch(f"{_GENERATOR_MODULE}.ls") as mock_ls:
             self._call(
                 mock_ls,
                 dyn,
@@ -345,7 +347,7 @@ class TestEccentricityAtReferenceFrequencyWithMock:
     def test_returns_eccentricity_at_x_reference(self):
         M, target_idx = 20.0, 60
         dyn, x_arr, e_arr, f_ref = self._setup(target_idx=target_idx, M=M)
-        with patch("esigmapy.generator.ls") as mock_ls:
+        with patch(f"{_GENERATOR_MODULE}.ls") as mock_ls:
             mock_ls.SimInspiralESIGMADynamics.return_value = dyn
             result = eccentricity_at_reference_frequency(
                 M / 2, M / 2, 0, 0, 0.1, 0, 20.0, 4096, f_ref
@@ -355,7 +357,7 @@ class TestEccentricityAtReferenceFrequencyWithMock:
     def test_returns_float(self):
         M = 20.0
         dyn, _, _, f_ref = self._setup(M=M)
-        with patch("esigmapy.generator.ls") as mock_ls:
+        with patch(f"{_GENERATOR_MODULE}.ls") as mock_ls:
             mock_ls.SimInspiralESIGMADynamics.return_value = dyn
             result = eccentricity_at_reference_frequency(
                 M / 2, M / 2, 0, 0, 0.1, 0, 20.0, 4096, f_ref

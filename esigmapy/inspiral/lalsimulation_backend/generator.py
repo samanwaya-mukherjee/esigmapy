@@ -1232,7 +1232,8 @@ def get_dynamics(mass1, mass2, f_lower, delta_t, **kwargs):
     import lal
 
     retval = ls.SimInspiralESIGMADynamics(
-        mass1, mass2,
+        mass1,
+        mass2,
         kwargs.get("spin1z", 0.0),
         kwargs.get("spin2z", 0.0),
         kwargs.get("eccentricity", 0.0),
@@ -1258,7 +1259,10 @@ def get_dynamics(mass1, mass2, f_lower, delta_t, **kwargs):
 def get_modes(mass1, mass2, f_lower, delta_t, **kwargs):
     """Generate inspiral GW modes using the LALSim C backend."""
     result = get_inspiral_esigma_modes(
-        mass1, mass2, f_lower, delta_t,
+        mass1,
+        mass2,
+        f_lower,
+        delta_t,
         spin1z=kwargs.get("spin1z", 0.0),
         spin2z=kwargs.get("spin2z", 0.0),
         eccentricity=kwargs.get("eccentricity", 0.0),
@@ -1276,7 +1280,10 @@ def get_modes(mass1, mass2, f_lower, delta_t, **kwargs):
 def get_waveform(mass1, mass2, f_lower, delta_t, **kwargs):
     """Generate inspiral h_plus, h_cross using the LALSim C backend."""
     return get_inspiral_esigma_waveform(
-        mass1, mass2, f_lower, delta_t,
+        mass1,
+        mass2,
+        f_lower,
+        delta_t,
         spin1z=kwargs.get("spin1z", 0.0),
         spin2z=kwargs.get("spin2z", 0.0),
         eccentricity=kwargs.get("eccentricity", 0.0),

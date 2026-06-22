@@ -97,7 +97,7 @@ class TestGenerateLalsimModesWithMock:
         # Linked list has (2,2) and (3,3); only (2,2) is requested
         node_33 = _mode_node(3, 3, np.ones(self._N, dtype=complex))
         node_22 = _mode_node(2, 2, np.ones(self._N, dtype=complex), nxt=node_33)
-        with patch("esigmapy.mr_generator.ls") as mock_ls:
+        with patch("esigmapy.post_inspiral.mr_generator.ls") as mock_ls:
             mock_ls.NRSur7dq4 = 900
             mock_ls.SimInspiralChooseTDModes.return_value = node_22
             result = _generate_lalsim_modes(
@@ -119,7 +119,7 @@ class TestGenerateLalsimModesWithMock:
         # Linked list has (2,2) and (3,3); both requested
         node_33 = _mode_node(3, 3, np.ones(self._N, dtype=complex))
         node_22 = _mode_node(2, 2, np.ones(self._N, dtype=complex), nxt=node_33)
-        with patch("esigmapy.mr_generator.ls") as mock_ls:
+        with patch("esigmapy.post_inspiral.mr_generator.ls") as mock_ls:
             mock_ls.NRSur7dq4 = 900
             mock_ls.SimInspiralChooseTDModes.return_value = node_22
             result = _generate_lalsim_modes(
@@ -140,7 +140,7 @@ class TestGenerateLalsimModesWithMock:
     def test_mode_data_is_numpy_array(self):
         node = _mode_node(2, 2, np.ones(self._N, dtype=complex))
         node.next = None
-        with patch("esigmapy.mr_generator.ls") as mock_ls:
+        with patch("esigmapy.post_inspiral.mr_generator.ls") as mock_ls:
             mock_ls.NRSur7dq4 = 900
             mock_ls.SimInspiralChooseTDModes.return_value = node
             result = _generate_lalsim_modes(
@@ -162,7 +162,7 @@ class TestGenerateLalsimModesWithMock:
         # Linked list has (4,4) only; request is (2,2) — result should be empty
         node = _mode_node(4, 4, np.ones(self._N, dtype=complex))
         node.next = None
-        with patch("esigmapy.mr_generator.ls") as mock_ls:
+        with patch("esigmapy.post_inspiral.mr_generator.ls") as mock_ls:
             mock_ls.NRSur7dq4 = 900
             mock_ls.SimInspiralChooseTDModes.return_value = node
             result = _generate_lalsim_modes(
@@ -192,7 +192,9 @@ class TestGetMrModesWithMock:
     _FAKE = {(2, 2): np.ones(64, dtype=complex)}
 
     def test_f_ref_defaults_to_f_lower(self):
-        with patch("esigmapy.mr_generator._generate_lalsim_modes") as mock_gen:
+        with patch(
+            "esigmapy.post_inspiral.mr_generator._generate_lalsim_modes"
+        ) as mock_gen:
             mock_gen.return_value = self._FAKE
             get_mr_modes(
                 10, 10, 20.0, 1.0 / 4096, modes_to_use=[(2, 2)], approximant="NRSur7dq4"
@@ -200,7 +202,9 @@ class TestGetMrModesWithMock:
         assert mock_gen.call_args.kwargs["f_ref"] == 20.0
 
     def test_coa_phase_defaults_to_zero(self):
-        with patch("esigmapy.mr_generator._generate_lalsim_modes") as mock_gen:
+        with patch(
+            "esigmapy.post_inspiral.mr_generator._generate_lalsim_modes"
+        ) as mock_gen:
             mock_gen.return_value = self._FAKE
             get_mr_modes(
                 10,
@@ -215,9 +219,9 @@ class TestGetMrModesWithMock:
 
     def test_lalsim_approximant_routes_to_lalsim(self):
         with patch(
-            "esigmapy.mr_generator._generate_lalsim_modes"
+            "esigmapy.post_inspiral.mr_generator._generate_lalsim_modes"
         ) as mock_lalsim, patch(
-            "esigmapy.mr_generator._generate_pyseobnr_modes"
+            "esigmapy.post_inspiral.mr_generator._generate_pyseobnr_modes"
         ) as mock_pyseobnr:
             mock_lalsim.return_value = self._FAKE
             get_mr_modes(
@@ -228,9 +232,9 @@ class TestGetMrModesWithMock:
 
     def test_pyseobnr_approximant_routes_to_pyseobnr(self):
         with patch(
-            "esigmapy.mr_generator._generate_pyseobnr_modes"
+            "esigmapy.post_inspiral.mr_generator._generate_pyseobnr_modes"
         ) as mock_pyseobnr, patch(
-            "esigmapy.mr_generator._generate_lalsim_modes"
+            "esigmapy.post_inspiral.mr_generator._generate_lalsim_modes"
         ) as mock_lalsim:
             mock_pyseobnr.return_value = self._FAKE
             get_mr_modes(

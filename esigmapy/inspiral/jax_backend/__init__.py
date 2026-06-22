@@ -6,6 +6,7 @@ and jax.vmap-vectorized mode computation.
 """
 
 import jax
+
 jax.config.update("jax_enable_x64", True)
 
 from .kepler import (

@@ -353,22 +353,40 @@ def _make_vectorized_mode_kernel(l: int, m: int, vpnorder: int):
     from .go_terms import generate_hlm_jax, CommonVars
 
     @jax.jit
-    def _vectorized_kernel(r_vec, rdot_vec, phi_vec, phidot_vec, x_vec,
-                           total_mass, eta, R, S1z, S2z):
+    def _vectorized_kernel(
+        r_vec, rdot_vec, phi_vec, phidot_vec, x_vec, total_mass, eta, R, S1z, S2z
+    ):
         b0 = 2.0 * total_mass / jnp.exp(0.5)
         logb0 = jnp.log(b0)
         delta = jnp.sqrt(1.0 - 4.0 * eta)
 
         def single_step(r, rDOT, Phi, PhiDOT, x):
             params = CommonVars(
-                xp5=jnp.sqrt(x), logx=jnp.log(x),
-                b0=b0, r0=b0, logb0=logb0, logr0=logb0, delta=delta,
+                xp5=jnp.sqrt(x),
+                logx=jnp.log(x),
+                b0=b0,
+                r0=b0,
+                logb0=logb0,
+                logr0=logb0,
+                delta=delta,
             )
             hlm = 0.0 + 0.0j
             for pno in range(vpnorder, -1, -1):
                 hlm = hlm + generate_hlm_jax(
-                    l, m, total_mass, eta,
-                    r, rDOT, Phi, PhiDOT, R, pno, S1z, S2z, x, params,
+                    l,
+                    m,
+                    total_mass,
+                    eta,
+                    r,
+                    rDOT,
+                    Phi,
+                    PhiDOT,
+                    R,
+                    pno,
+                    S1z,
+                    S2z,
+                    x,
+                    params,
                 )
             return hlm
 
@@ -444,8 +462,9 @@ def compute_mode_from_dynamics_jax(
     x_arr = jnp.asarray(x_vec)
 
     # ONE vectorized JIT call for all N timesteps
-    h_lm = kernel(r_scaled, rdot_arr, phi_arr, phidot_scaled, x_arr,
-                  total_mass, eta, R, S1z, S2z)
+    h_lm = kernel(
+        r_scaled, rdot_arr, phi_arr, phidot_scaled, x_arr, total_mass, eta, R, S1z, S2z
+    )
 
     return np.asarray(h_lm * LAL_MRSUN_SI)
 
@@ -685,7 +704,8 @@ def get_inspiral_esigma_waveform_jax(
 def get_dynamics(mass1, mass2, f_lower, delta_t, **kwargs):
     """Generate inspiral dynamics using the JAX backend."""
     return inspiral_esigma_dynamics_jax(
-        mass1, mass2,
+        mass1,
+        mass2,
         kwargs.get("spin1z", 0.0),
         kwargs.get("spin2z", 0.0),
         kwargs.get("eccentricity", 0.0),
@@ -699,7 +719,10 @@ def get_dynamics(mass1, mass2, f_lower, delta_t, **kwargs):
 def get_modes(mass1, mass2, f_lower, delta_t, **kwargs):
     """Generate inspiral GW modes using the JAX backend."""
     return get_inspiral_esigma_modes_jax(
-        mass1, mass2, f_lower, delta_t,
+        mass1,
+        mass2,
+        f_lower,
+        delta_t,
         spin1z=kwargs.get("spin1z", 0.0),
         spin2z=kwargs.get("spin2z", 0.0),
         eccentricity=kwargs.get("eccentricity", 0.0),
@@ -714,7 +737,10 @@ def get_modes(mass1, mass2, f_lower, delta_t, **kwargs):
 def get_waveform(mass1, mass2, f_lower, delta_t, **kwargs):
     """Generate inspiral h_plus, h_cross using the JAX backend."""
     return get_inspiral_esigma_waveform_jax(
-        mass1, mass2, f_lower, delta_t,
+        mass1,
+        mass2,
+        f_lower,
+        delta_t,
         spin1z=kwargs.get("spin1z", 0.0),
         spin2z=kwargs.get("spin2z", 0.0),
         eccentricity=kwargs.get("eccentricity", 0.0),
@@ -754,10 +780,12 @@ def get_modes_from_dynamics(dyn, mass1, mass2, **kwargs):
 
     # Pad to n_max to avoid JIT recompilation for different array lengths
     if n_max and N_real < n_max:
+
         def _pad(arr):
             out = np.zeros(n_max, dtype=arr.dtype)
-            out[:len(arr)] = arr
+            out[: len(arr)] = arr
             return out
+
         x_vec = _pad(x_vec)
         phi_vec = _pad(phi_vec)
         phidot_vec = _pad(phidot_vec)
@@ -767,11 +795,19 @@ def get_modes_from_dynamics(dyn, mass1, mass2, **kwargs):
     result = {}
     for el, em in full_modes:
         h = compute_mode_from_dynamics_jax(
-            el, em, x_vec, phi_vec, phidot_vec, r_vec, rdot_vec,
-            mass1, mass2,
+            el,
+            em,
+            x_vec,
+            phi_vec,
+            phidot_vec,
+            r_vec,
+            rdot_vec,
+            mass1,
+            mass2,
             kwargs.get("spin1z", 0.0),
             kwargs.get("spin2z", 0.0),
-            R, mode_pn_order,
+            R,
+            mode_pn_order,
         )
         result[(el, em)] = h[:N_real]
 
@@ -797,6 +833,17 @@ def warmup(n_max=None, modes=None):
     R_dummy = 100.0 * 1e6 * float(LAL_PC_SI)
     for el, em in modes:
         compute_mode_from_dynamics_jax(
-            el, em, dummy, dummy, dummy, dummy, dummy,
-            20.0, 20.0, 0.0, 0.0, R_dummy, 8,
+            el,
+            em,
+            dummy,
+            dummy,
+            dummy,
+            dummy,
+            dummy,
+            20.0,
+            20.0,
+            0.0,
+            0.0,
+            R_dummy,
+            8,
         )

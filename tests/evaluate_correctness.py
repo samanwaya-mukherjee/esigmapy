@@ -17,6 +17,7 @@ Usage:
     conda run -n lalsuite-dev python tests/evaluate_correctness.py
     conda run -n lalsuite-dev python tests/evaluate_correctness.py --n-rhs 500 --n-evol 50
 """
+
 import os
 import sys
 import argparse
@@ -32,13 +33,15 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 RESULTS_DIR = os.path.join(
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..")), "correctness_results"
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..")),
+    "correctness_results",
 )
 
 
 # ---------------------------------------------------------------------------
 # Parameter generation
 # ---------------------------------------------------------------------------
+
 
 def generate_params(n, seed=42):
     """Generate n random binary parameter sets."""
@@ -49,13 +52,16 @@ def generate_params(n, seed=42):
         q = rng.uniform(1, 8)
         m1 = m_tot * q / (1 + q)
         m2 = m_tot / (1 + q)
-        params.append({
-            "mass1": m1, "mass2": m2,
-            "spin1z": rng.uniform(-0.8, 0.8),
-            "spin2z": rng.uniform(-0.8, 0.8),
-            "eccentricity": rng.uniform(0.0, 0.4),
-            "f_lower": rng.choice([10.0, 15.0, 20.0]),
-        })
+        params.append(
+            {
+                "mass1": m1,
+                "mass2": m2,
+                "spin1z": rng.uniform(-0.8, 0.8),
+                "spin2z": rng.uniform(-0.8, 0.8),
+                "eccentricity": rng.uniform(0.0, 0.4),
+                "f_lower": rng.choice([10.0, 15.0, 20.0]),
+            }
+        )
     return params
 
 
@@ -63,12 +69,14 @@ def generate_params(n, seed=42):
 # Test 1: ODE RHS comparison
 # ---------------------------------------------------------------------------
 
+
 def compare_ode_rhs(params_list, ode_eps=1e-12):
     """Compare ODE RHS at initial state: Python/JAX vs LALSim (fine FD)."""
     import lal
     import lalsimulation as ls
     from esigmapy.inspiral.numba_backend.pn_inspiral import (
-        eccentric_x_model_odes, x_dot_4pn_SF,
+        eccentric_x_model_odes,
+        x_dot_4pn_SF,
     )
     from esigmapy.inspiral.jax_backend.inspiral import eccentric_x_model_odes_jax
     import jax.numpy as jnp
@@ -88,7 +96,9 @@ def compare_ode_rhs(params_list, ode_eps=1e-12):
         # Python RHS
         x_dot_4pn_SF_val = x_dot_4pn_SF(ecc, eta, S1z)
         y0 = np.array([x0, ecc, 0.0, 0.0])
-        dydt_py = eccentric_x_model_odes(0.0, y0, eta, m1, m2, S1z, S2z, 8, x_dot_4pn_SF_val)
+        dydt_py = eccentric_x_model_odes(
+            0.0, y0, eta, m1, m2, S1z, S2z, 8, x_dot_4pn_SF_val
+        )
 
         # JAX RHS
         args_jax = (eta, m1, m2, S1z, S2z, 8, 8)
@@ -101,12 +111,14 @@ def compare_ode_rhs(params_list, ode_eps=1e-12):
                 m1, m2, S1z, S2z, ecc, f_lower, 0.0, ode_eps, 1.0 / dt_fine_sec
             )
             dt_geom = retval[0].data.data[1] - retval[0].data.data[0]
-            dydt_lal = np.array([
-                (retval[1].data.data[1] - retval[1].data.data[0]) / dt_geom,
-                (retval[2].data.data[1] - retval[2].data.data[0]) / dt_geom,
-                (retval[3].data.data[1] - retval[3].data.data[0]) / dt_geom,
-                (retval[4].data.data[1] - retval[4].data.data[0]) / dt_geom,
-            ])
+            dydt_lal = np.array(
+                [
+                    (retval[1].data.data[1] - retval[1].data.data[0]) / dt_geom,
+                    (retval[2].data.data[1] - retval[2].data.data[0]) / dt_geom,
+                    (retval[3].data.data[1] - retval[3].data.data[0]) / dt_geom,
+                    (retval[4].data.data[1] - retval[4].data.data[0]) / dt_geom,
+                ]
+            )
             del retval
             has_lal = True
         except Exception:
@@ -137,6 +149,7 @@ def compare_ode_rhs(params_list, ode_eps=1e-12):
 # Test 2: Full dynamics evolution comparison
 # ---------------------------------------------------------------------------
 
+
 def compare_dynamics(params_list, ode_eps=1e-12):
     """Compare full orbital dynamics (x, e, phi) across backends."""
     from esigmapy.inspiral import get_dynamics
@@ -144,21 +157,31 @@ def compare_dynamics(params_list, ode_eps=1e-12):
     results = []
     for i, p in enumerate(params_list):
         kw = dict(
-            spin1z=p["spin1z"], spin2z=p["spin2z"],
-            eccentricity=p["eccentricity"], mean_anomaly=0.0,
+            spin1z=p["spin1z"],
+            spin2z=p["spin2z"],
+            eccentricity=p["eccentricity"],
+            mean_anomaly=0.0,
             ode_eps=ode_eps,
         )
 
         try:
-            dyn_lal = get_dynamics(p["mass1"], p["mass2"], p["f_lower"], 1/4096.0,
-                                   backend="lalsim", **kw)
+            dyn_lal = get_dynamics(
+                p["mass1"], p["mass2"], p["f_lower"], 1 / 4096.0, backend="lalsim", **kw
+            )
         except Exception as e:
             results.append({"params": p, "error": f"lalsim: {e}"})
             continue
 
         try:
-            dyn_numba = get_dynamics(p["mass1"], p["mass2"], p["f_lower"], 1/4096.0,
-                                     backend="numba", integrator="dop853", **kw)
+            dyn_numba = get_dynamics(
+                p["mass1"],
+                p["mass2"],
+                p["f_lower"],
+                1 / 4096.0,
+                backend="numba",
+                integrator="dop853",
+                **kw,
+            )
         except Exception as e:
             results.append({"params": p, "error": f"numba: {e}"})
             continue
@@ -169,19 +192,25 @@ def compare_dynamics(params_list, ode_eps=1e-12):
         phi_diff = np.abs(dyn_lal["phi_evol"][:N_cmp] - dyn_numba["phi_evol"][:N_cmp])
         x_diff = np.abs(dyn_lal["x_evol"][:N_cmp] - dyn_numba["x_evol"][:N_cmp])
 
-        results.append({
-            "params": p,
-            "N_lal": len(dyn_lal["phi_evol"]),
-            "N_numba": len(dyn_numba["phi_evol"]),
-            "N_cmp": N_cmp,
-            "max_phi_diff_rad": float(np.max(phi_diff)),
-            "max_gw_phase_diff_rad": float(2 * np.max(phi_diff)),
-            "max_x_rel_diff": float(np.max(x_diff) / np.max(dyn_lal["x_evol"][:N_cmp])),
-            "phi_lal_final": float(dyn_lal["phi_evol"][N_cmp - 1]),
-        })
+        results.append(
+            {
+                "params": p,
+                "N_lal": len(dyn_lal["phi_evol"]),
+                "N_numba": len(dyn_numba["phi_evol"]),
+                "N_cmp": N_cmp,
+                "max_phi_diff_rad": float(np.max(phi_diff)),
+                "max_gw_phase_diff_rad": float(2 * np.max(phi_diff)),
+                "max_x_rel_diff": float(
+                    np.max(x_diff) / np.max(dyn_lal["x_evol"][:N_cmp])
+                ),
+                "phi_lal_final": float(dyn_lal["phi_evol"][N_cmp - 1]),
+            }
+        )
 
-        print(f"  Dynamics: {i+1}/{len(params_list)} M={p['mass1']+p['mass2']:.1f} "
-              f"GW_phase_diff={2*np.max(phi_diff):.4f} rad")
+        print(
+            f"  Dynamics: {i+1}/{len(params_list)} M={p['mass1']+p['mass2']:.1f} "
+            f"GW_phase_diff={2*np.max(phi_diff):.4f} rad"
+        )
 
     return results
 
@@ -190,6 +219,7 @@ def compare_dynamics(params_list, ode_eps=1e-12):
 # Test 3: Mode + waveform comparison
 # ---------------------------------------------------------------------------
 
+
 def compare_modes(params_list, ode_eps=1e-12):
     """Compare GW modes across backends."""
     from esigmapy.inspiral import get_modes
@@ -197,29 +227,46 @@ def compare_modes(params_list, ode_eps=1e-12):
     results = []
     for i, p in enumerate(params_list):
         kw = dict(
-            spin1z=p["spin1z"], spin2z=p["spin2z"],
-            eccentricity=p["eccentricity"], mean_anomaly=0.0,
-            distance=100.0, ode_eps=ode_eps,
+            spin1z=p["spin1z"],
+            spin2z=p["spin2z"],
+            eccentricity=p["eccentricity"],
+            mean_anomaly=0.0,
+            distance=100.0,
+            ode_eps=ode_eps,
             modes_to_use=[(2, 2), (3, 3), (4, 4)],
         )
 
         try:
-            modes_lal = get_modes(p["mass1"], p["mass2"], p["f_lower"], 1/4096.0,
-                                   backend="lalsim", **kw)
+            modes_lal = get_modes(
+                p["mass1"], p["mass2"], p["f_lower"], 1 / 4096.0, backend="lalsim", **kw
+            )
         except Exception as e:
             results.append({"params": p, "error": f"lalsim: {e}"})
             continue
 
         try:
-            modes_numba = get_modes(p["mass1"], p["mass2"], p["f_lower"], 1/4096.0,
-                                     backend="numba", integrator="dop853", **kw)
+            modes_numba = get_modes(
+                p["mass1"],
+                p["mass2"],
+                p["f_lower"],
+                1 / 4096.0,
+                backend="numba",
+                integrator="dop853",
+                **kw,
+            )
         except Exception as e:
             results.append({"params": p, "error": f"numba: {e}"})
             continue
 
         try:
-            modes_hybrid = get_modes(p["mass1"], p["mass2"], p["f_lower"], 1/4096.0,
-                                      backend="numba:jax", **kw)
+            modes_hybrid = get_modes(
+                p["mass1"],
+                p["mass2"],
+                p["f_lower"],
+                1 / 4096.0,
+                backend="numba:jax",
+                **kw,
+            )
         except Exception as e:
             modes_hybrid = None
 
@@ -239,7 +286,9 @@ def compare_modes(params_list, ode_eps=1e-12):
                 h_hyb = modes_hybrid[lm]
                 N_h = min(len(h_lal), len(h_hyb))
                 N_h_cmp = int(0.9 * N_h)
-                rd_hybrid = float(np.max(np.abs(h_lal[:N_h_cmp] - h_hyb[:N_h_cmp])) / max_abs)
+                rd_hybrid = float(
+                    np.max(np.abs(h_lal[:N_h_cmp] - h_hyb[:N_h_cmp])) / max_abs
+                )
 
             r["modes"][f"{lm[0]},{lm[1]}"] = {
                 "rd_numba_vs_lal": rd_numba,
@@ -248,9 +297,12 @@ def compare_modes(params_list, ode_eps=1e-12):
             }
 
         results.append(r)
-        mode_str = " ".join(f"({k})={v['rd_numba_vs_lal']:.2e}"
-                           for k, v in r["modes"].items())
-        print(f"  Modes: {i+1}/{len(params_list)} M={p['mass1']+p['mass2']:.1f} {mode_str}")
+        mode_str = " ".join(
+            f"({k})={v['rd_numba_vs_lal']:.2e}" for k, v in r["modes"].items()
+        )
+        print(
+            f"  Modes: {i+1}/{len(params_list)} M={p['mass1']+p['mass2']:.1f} {mode_str}"
+        )
 
     return results
 
@@ -259,24 +311,47 @@ def compare_modes(params_list, ode_eps=1e-12):
 # Plotting
 # ---------------------------------------------------------------------------
 
+
 def plot_rhs_results(rhs_results):
     """Plot ODE RHS relative differences."""
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
     # Py vs JAX
-    for name, color in [("xdot", "C0"), ("edot", "C1"), ("ldot", "C2"), ("phidot", "C3")]:
+    for name, color in [
+        ("xdot", "C0"),
+        ("edot", "C1"),
+        ("ldot", "C2"),
+        ("phidot", "C3"),
+    ]:
         vals = [r[f"rd_py_jax_{name}"] for r in rhs_results]
-        axes[0].hist(np.log10(np.array(vals) + 1e-16), bins=30, alpha=0.5, label=name, color=color)
+        axes[0].hist(
+            np.log10(np.array(vals) + 1e-16),
+            bins=30,
+            alpha=0.5,
+            label=name,
+            color=color,
+        )
     axes[0].set_xlabel("log10(relative difference)")
     axes[0].set_ylabel("Count")
     axes[0].set_title("Python vs JAX (should be ~machine precision)")
     axes[0].legend()
 
     # Py vs LALSim
-    for name, color in [("xdot", "C0"), ("edot", "C1"), ("ldot", "C2"), ("phidot", "C3")]:
+    for name, color in [
+        ("xdot", "C0"),
+        ("edot", "C1"),
+        ("ldot", "C2"),
+        ("phidot", "C3"),
+    ]:
         vals = [r[f"rd_py_lal_{name}"] for r in rhs_results if r["has_lal"]]
         if vals:
-            axes[1].hist(np.log10(np.array(vals) + 1e-16), bins=30, alpha=0.5, label=name, color=color)
+            axes[1].hist(
+                np.log10(np.array(vals) + 1e-16),
+                bins=30,
+                alpha=0.5,
+                label=name,
+                color=color,
+            )
     axes[1].set_xlabel("log10(relative difference)")
     axes[1].set_ylabel("Count")
     axes[1].set_title("Python vs LALSim C (FD estimate)")
@@ -338,13 +413,27 @@ def plot_modes_results(modes_results):
                 rd_hybrid.append(r["modes"][lm_key]["rd_hybrid_vs_lal"])
                 m_vals.append(m)
         if rd_numba:
-            ax.scatter(m_vals, rd_numba, marker=marker, s=40, alpha=0.7,
-                      label=f"({lm_key}) numba vs C")
+            ax.scatter(
+                m_vals,
+                rd_numba,
+                marker=marker,
+                s=40,
+                alpha=0.7,
+                label=f"({lm_key}) numba vs C",
+            )
             if any(v is not None for v in rd_hybrid):
                 rd_h = [v for v in rd_hybrid if v is not None]
                 m_h = [m for m, v in zip(m_vals, rd_hybrid) if v is not None]
-                ax.scatter(m_h, rd_h, marker=marker, s=20, alpha=0.5, facecolors="none",
-                          edgecolors="red", label=f"({lm_key}) hybrid vs C")
+                ax.scatter(
+                    m_h,
+                    rd_h,
+                    marker=marker,
+                    s=20,
+                    alpha=0.5,
+                    facecolors="none",
+                    edgecolors="red",
+                    label=f"({lm_key}) hybrid vs C",
+                )
 
     ax.set_xlabel("Total mass (Msun)")
     ax.set_ylabel("Max relative mode difference")
@@ -360,15 +449,22 @@ def plot_modes_results(modes_results):
 # Summary
 # ---------------------------------------------------------------------------
 
+
 def write_summary(rhs_results, dyn_results, modes_results):
     """Write a text summary."""
     lines = ["ESIGMA Correctness Evaluation Summary", "=" * 50, ""]
 
     # RHS
-    py_jax_max = {name: max(r[f"rd_py_jax_{name}"] for r in rhs_results)
-                  for name in ["xdot", "edot", "ldot", "phidot"]}
-    py_lal_max = {name: max((r[f"rd_py_lal_{name}"] for r in rhs_results if r["has_lal"]), default=0)
-                  for name in ["xdot", "edot", "ldot", "phidot"]}
+    py_jax_max = {
+        name: max(r[f"rd_py_jax_{name}"] for r in rhs_results)
+        for name in ["xdot", "edot", "ldot", "phidot"]
+    }
+    py_lal_max = {
+        name: max(
+            (r[f"rd_py_lal_{name}"] for r in rhs_results if r["has_lal"]), default=0
+        )
+        for name in ["xdot", "edot", "ldot", "phidot"]
+    }
 
     lines.append(f"1. ODE RHS comparison ({len(rhs_results)} systems)")
     lines.append(f"   Python vs JAX (worst-case relative diff):")
@@ -395,14 +491,25 @@ def write_summary(rhs_results, dyn_results, modes_results):
     if valid_modes:
         lines.append(f"3. GW mode comparison ({len(valid_modes)} systems)")
         for lm_key in ["2,2", "3,3", "4,4"]:
-            rd_vals = [r["modes"][lm_key]["rd_numba_vs_lal"]
-                      for r in valid_modes if lm_key in r["modes"]]
+            rd_vals = [
+                r["modes"][lm_key]["rd_numba_vs_lal"]
+                for r in valid_modes
+                if lm_key in r["modes"]
+            ]
             if rd_vals:
-                lines.append(f"   ({lm_key}) numba vs C: mean={np.mean(rd_vals):.4e} max={np.max(rd_vals):.4e}")
-            rd_hyb = [r["modes"][lm_key]["rd_hybrid_vs_lal"]
-                     for r in valid_modes if lm_key in r["modes"] and r["modes"][lm_key]["rd_hybrid_vs_lal"] is not None]
+                lines.append(
+                    f"   ({lm_key}) numba vs C: mean={np.mean(rd_vals):.4e} max={np.max(rd_vals):.4e}"
+                )
+            rd_hyb = [
+                r["modes"][lm_key]["rd_hybrid_vs_lal"]
+                for r in valid_modes
+                if lm_key in r["modes"]
+                and r["modes"][lm_key]["rd_hybrid_vs_lal"] is not None
+            ]
             if rd_hyb:
-                lines.append(f"   ({lm_key}) hybrid vs C: mean={np.mean(rd_hyb):.4e} max={np.max(rd_hyb):.4e}")
+                lines.append(
+                    f"   ({lm_key}) hybrid vs C: mean={np.mean(rd_hyb):.4e} max={np.max(rd_hyb):.4e}"
+                )
 
     summary = "\n".join(lines)
     with open(os.path.join(RESULTS_DIR, "summary.txt"), "w") as f:
@@ -415,19 +522,33 @@ def write_summary(rhs_results, dyn_results, modes_results):
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Evaluate ESIGMA correctness across backends.")
-    parser.add_argument("--n-rhs", type=int, default=200, help="Number of systems for ODE RHS test")
-    parser.add_argument("--n-evol", type=int, default=20, help="Number of systems for dynamics/modes test")
-    parser.add_argument("--ode-eps", type=float, default=1e-12, help="ODE tolerance for all backends")
+    parser = argparse.ArgumentParser(
+        description="Evaluate ESIGMA correctness across backends."
+    )
+    parser.add_argument(
+        "--n-rhs", type=int, default=200, help="Number of systems for ODE RHS test"
+    )
+    parser.add_argument(
+        "--n-evol",
+        type=int,
+        default=20,
+        help="Number of systems for dynamics/modes test",
+    )
+    parser.add_argument(
+        "--ode-eps", type=float, default=1e-12, help="ODE tolerance for all backends"
+    )
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     args = parser.parse_args()
 
     os.makedirs(RESULTS_DIR, exist_ok=True)
 
     # Ensure LALSim is available
-    lalsim_path = os.environ.get("LALSIM_PYTHON_PATH",
-        "/home/prayush/local/lalsuite/esigma_github/lib/python3.13/site-packages")
+    lalsim_path = os.environ.get(
+        "LALSIM_PYTHON_PATH",
+        "/home/prayush/local/lalsuite/esigma_github/lib/python3.13/site-packages",
+    )
     if lalsim_path not in sys.path:
         sys.path.insert(0, lalsim_path)
 
