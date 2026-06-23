@@ -4797,19 +4797,6 @@ def hQC_3_m_1_jax(
                 - 97020.0 * eta * S2z * LOG2
                 + 114660.0 * delta * eta * S2z * LOG2
                 + 35280.0j * delta * LOG2**2
-                - 2490264.0j * delta * LOG3
-                + 1905120.0j * delta * EulerGamma * LOG3
-                + 952560.0 * delta * M_PI * LOG3
-                - 317520.0 * S1z * LOG3
-                - 317520.0 * delta * S1z * LOG3
-                + 1508220.0 * eta * S1z * LOG3
-                + 396900.0 * delta * eta * S1z * LOG3
-                + 317520.0 * S2z * LOG3
-                - 317520.0 * delta * S2z * LOG3
-                - 1508220.0 * eta * S2z * LOG3
-                + 396900.0 * delta * eta * S2z * LOG3
-                + 1905120.0j * delta * LOG2 * LOG3
-                + 952560.0j * delta * LOG3**2
                 + 35280.0j * delta * logb0**2
                 + 21840.0j * delta * logr0
                 - 138348.0j * delta * logx
