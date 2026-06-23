@@ -220,10 +220,75 @@ def compare_dynamics(params_list, ode_eps=1e-12):
 # ---------------------------------------------------------------------------
 
 
+def _mode_diagnostics(h_ref, h_test, dt):
+    """Compute phase, amplitude, and match diagnostics between two complex modes.
+
+    Parameters
+    ----------
+    h_ref, h_test : 1-D complex arrays (same length, already truncated)
+    dt : float, sample spacing in seconds
+
+    Returns
+    -------
+    dict with keys: max_phase_diff_rad, mean_phase_diff_rad,
+                    max_amp_frac_diff, mean_amp_frac_diff,
+                    match (maximised over time/phase shift)
+    """
+    A_ref = np.abs(h_ref)
+    A_test = np.abs(h_test)
+
+    # Amplitude-weighted mask: ignore samples where amplitude < 1% of peak
+    mask = A_ref > 0.01 * np.max(A_ref)
+
+    # Phase difference: arg(h_test / h_ref) — automatically accounts for sign
+    ratio = np.where(mask, h_test / np.where(mask, h_ref, 1.0), 1.0)
+    phase_diff = np.angle(ratio)
+    # Unwrap to remove 2-pi jumps, then subtract any linear trend (time shift)
+    phase_diff_unwrapped = np.unwrap(phase_diff)
+    # Remove best-fit linear trend (= time + phase offset) to isolate intrinsic phase error
+    idx = np.where(mask)[0]
+    if len(idx) > 2:
+        coeffs = np.polyfit(idx, phase_diff_unwrapped[idx], 1)
+        phase_detrended = phase_diff_unwrapped[idx] - np.polyval(coeffs, idx)
+    else:
+        phase_detrended = phase_diff_unwrapped[mask]
+
+    max_phase = float(np.max(np.abs(phase_detrended))) if len(phase_detrended) > 0 else 0.0
+    mean_phase = float(np.mean(np.abs(phase_detrended))) if len(phase_detrended) > 0 else 0.0
+
+    # Fractional amplitude difference
+    amp_frac = np.abs(A_test[mask] - A_ref[mask]) / np.where(A_ref[mask] > 0, A_ref[mask], 1.0)
+    max_amp = float(np.max(amp_frac)) if len(amp_frac) > 0 else 0.0
+    mean_amp = float(np.mean(amp_frac)) if len(amp_frac) > 0 else 0.0
+
+    # Match (faithfulness): max over time/phase shift of Re(<h1|h2>) / sqrt(<h1|h1><h2|h2>)
+    # Use flat PSD (white noise) inner product for simplicity
+    norm_ref = np.sqrt(np.sum(np.abs(h_ref) ** 2))
+    norm_test = np.sqrt(np.sum(np.abs(h_test) ** 2))
+    if norm_ref > 0 and norm_test > 0:
+        # Cross-correlate in frequency domain to maximize over time shift
+        H_ref = np.fft.fft(h_ref)
+        H_test = np.fft.fft(h_test)
+        cross = np.fft.ifft(np.conj(H_ref) * H_test)
+        # Maximize over time shift and phase: |cross| captures both
+        match = float(np.max(np.abs(cross)) / (norm_ref * norm_test))
+    else:
+        match = 0.0
+
+    return {
+        "max_phase_diff_rad": max_phase,
+        "mean_phase_diff_rad": mean_phase,
+        "max_amp_frac_diff": max_amp,
+        "mean_amp_frac_diff": mean_amp,
+        "match": min(match, 1.0),
+    }
+
+
 def compare_modes(params_list, ode_eps=1e-12):
-    """Compare GW modes across backends."""
+    """Compare GW modes across backends with phase, amplitude, and match diagnostics."""
     from esigmapy.inspiral import get_modes
 
+    dt = 1.0 / 4096.0
     results = []
     for i, p in enumerate(params_list):
         kw = dict(
@@ -238,7 +303,7 @@ def compare_modes(params_list, ode_eps=1e-12):
 
         try:
             modes_lal = get_modes(
-                p["mass1"], p["mass2"], p["f_lower"], 1 / 4096.0, backend="lalsim", **kw
+                p["mass1"], p["mass2"], p["f_lower"], dt, backend="lalsim", **kw
             )
         except Exception as e:
             results.append({"params": p, "error": f"lalsim: {e}"})
@@ -249,7 +314,7 @@ def compare_modes(params_list, ode_eps=1e-12):
                 p["mass1"],
                 p["mass2"],
                 p["f_lower"],
-                1 / 4096.0,
+                dt,
                 backend="numba",
                 integrator="dop853",
                 **kw,
@@ -263,7 +328,7 @@ def compare_modes(params_list, ode_eps=1e-12):
                 p["mass1"],
                 p["mass2"],
                 p["f_lower"],
-                1 / 4096.0,
+                dt,
                 backend="numba:jax",
                 **kw,
             )
@@ -274,34 +339,34 @@ def compare_modes(params_list, ode_eps=1e-12):
         for lm in [(2, 2), (3, 3), (4, 4)]:
             if lm not in modes_lal or lm not in modes_numba:
                 continue
-            h_lal = modes_lal[lm]
-            h_numba = modes_numba[lm]
+            h_lal = np.asarray(modes_lal[lm], dtype=complex)
+            h_numba = np.asarray(modes_numba[lm], dtype=complex)
             N = min(len(h_lal), len(h_numba))
             N_cmp = int(0.9 * N)
-            max_abs = max(np.max(np.abs(h_lal[:N_cmp])), 1e-30)
-            rd_numba = float(np.max(np.abs(h_lal[:N_cmp] - h_numba[:N_cmp])) / max_abs)
 
-            rd_hybrid = None
+            diag_numba = _mode_diagnostics(h_lal[:N_cmp], h_numba[:N_cmp], dt)
+
+            diag_hybrid = None
             if modes_hybrid and lm in modes_hybrid:
-                h_hyb = modes_hybrid[lm]
+                h_hyb = np.asarray(modes_hybrid[lm], dtype=complex)
                 N_h = min(len(h_lal), len(h_hyb))
                 N_h_cmp = int(0.9 * N_h)
-                rd_hybrid = float(
-                    np.max(np.abs(h_lal[:N_h_cmp] - h_hyb[:N_h_cmp])) / max_abs
-                )
+                diag_hybrid = _mode_diagnostics(h_lal[:N_h_cmp], h_hyb[:N_h_cmp], dt)
 
             r["modes"][f"{lm[0]},{lm[1]}"] = {
-                "rd_numba_vs_lal": rd_numba,
-                "rd_hybrid_vs_lal": rd_hybrid,
+                "numba_vs_lal": diag_numba,
+                "hybrid_vs_lal": diag_hybrid,
                 "N": N,
             }
 
         results.append(r)
-        mode_str = " ".join(
-            f"({k})={v['rd_numba_vs_lal']:.2e}" for k, v in r["modes"].items()
-        )
+        lm22 = r["modes"].get("2,2", {}).get("numba_vs_lal", {})
         print(
-            f"  Modes: {i+1}/{len(params_list)} M={p['mass1']+p['mass2']:.1f} {mode_str}"
+            f"  Modes: {i + 1}/{len(params_list)}"
+            f" M={p['mass1'] + p['mass2']:.1f}"
+            f" (2,2) dphi={lm22.get('max_phase_diff_rad', 0):.4f}rad"
+            f" dA/A={lm22.get('max_amp_frac_diff', 0):.2e}"
+            f" match={lm22.get('match', 0):.8f}"
         )
 
     return results
@@ -395,51 +460,50 @@ def plot_dynamics_results(dyn_results):
 
 
 def plot_modes_results(modes_results):
-    """Plot mode comparison results."""
+    """Plot mode comparison: phase diff, amplitude diff, and mismatch."""
     valid = [r for r in modes_results if "error" not in r]
     if not valid:
         return
 
-    fig, ax = plt.subplots(figsize=(10, 6))
     masses = [r["params"]["mass1"] + r["params"]["mass2"] for r in valid]
 
-    for lm_key, marker in [("2,2", "o"), ("3,3", "s"), ("4,4", "^")]:
-        rd_numba = []
-        rd_hybrid = []
-        m_vals = []
-        for r, m in zip(valid, masses):
-            if lm_key in r["modes"]:
-                rd_numba.append(r["modes"][lm_key]["rd_numba_vs_lal"])
-                rd_hybrid.append(r["modes"][lm_key]["rd_hybrid_vs_lal"])
-                m_vals.append(m)
-        if rd_numba:
-            ax.scatter(
-                m_vals,
-                rd_numba,
-                marker=marker,
-                s=40,
-                alpha=0.7,
-                label=f"({lm_key}) numba vs C",
-            )
-            if any(v is not None for v in rd_hybrid):
-                rd_h = [v for v in rd_hybrid if v is not None]
-                m_h = [m for m, v in zip(m_vals, rd_hybrid) if v is not None]
-                ax.scatter(
-                    m_h,
-                    rd_h,
-                    marker=marker,
-                    s=20,
-                    alpha=0.5,
-                    facecolors="none",
-                    edgecolors="red",
-                    label=f"({lm_key}) hybrid vs C",
-                )
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
 
-    ax.set_xlabel("Total mass (Msun)")
-    ax.set_ylabel("Max relative mode difference")
-    ax.set_title("GW modes: numba/hybrid vs LALSim C")
-    ax.set_yscale("log")
-    ax.legend(loc="upper left", fontsize=8)
+    for lm_key, marker in [("2,2", "o"), ("3,3", "s"), ("4,4", "^")]:
+        phase_vals, amp_vals, mismatch_vals, m_vals = [], [], [], []
+        for r, m in zip(valid, masses):
+            if lm_key not in r["modes"]:
+                continue
+            d = r["modes"][lm_key]["numba_vs_lal"]
+            if d is None:
+                continue
+            phase_vals.append(d["max_phase_diff_rad"])
+            amp_vals.append(d["max_amp_frac_diff"])
+            mismatch_vals.append(1.0 - d["match"])
+            m_vals.append(m)
+
+        if not m_vals:
+            continue
+        axes[0].scatter(m_vals, phase_vals, marker=marker, s=40, alpha=0.7, label=f"({lm_key})")
+        axes[1].scatter(m_vals, amp_vals, marker=marker, s=40, alpha=0.7, label=f"({lm_key})")
+        axes[2].scatter(
+            m_vals, mismatch_vals, marker=marker, s=40, alpha=0.7, label=f"({lm_key})"
+        )
+
+    axes[0].set_ylabel("Max phase diff (rad, detrended)")
+    axes[0].set_title("Phase difference")
+    axes[1].set_ylabel("Max |dA/A|")
+    axes[1].set_title("Fractional amplitude difference")
+    axes[1].set_yscale("log")
+    axes[2].set_ylabel("1 - match")
+    axes[2].set_title("Mismatch (flat PSD)")
+    axes[2].set_yscale("log")
+
+    for ax in axes:
+        ax.set_xlabel("Total mass (Msun)")
+        ax.legend(fontsize=8)
+
+    fig.suptitle("GW modes: numba (dop853) vs LALSim C", fontsize=12)
     plt.tight_layout()
     plt.savefig(os.path.join(RESULTS_DIR, "modes_comparison.png"), dpi=150)
     plt.close()
@@ -490,26 +554,40 @@ def write_summary(rhs_results, dyn_results, modes_results):
     valid_modes = [r for r in modes_results if "error" not in r]
     if valid_modes:
         lines.append(f"3. GW mode comparison ({len(valid_modes)} systems)")
+        lines.append(f"   numba (dop853) vs LALSim C:")
         for lm_key in ["2,2", "3,3", "4,4"]:
-            rd_vals = [
-                r["modes"][lm_key]["rd_numba_vs_lal"]
+            diags = [
+                r["modes"][lm_key]["numba_vs_lal"]
                 for r in valid_modes
-                if lm_key in r["modes"]
+                if lm_key in r["modes"] and r["modes"][lm_key]["numba_vs_lal"] is not None
             ]
-            if rd_vals:
-                lines.append(
-                    f"   ({lm_key}) numba vs C: mean={np.mean(rd_vals):.4e} max={np.max(rd_vals):.4e}"
-                )
-            rd_hyb = [
-                r["modes"][lm_key]["rd_hybrid_vs_lal"]
-                for r in valid_modes
-                if lm_key in r["modes"]
-                and r["modes"][lm_key]["rd_hybrid_vs_lal"] is not None
-            ]
-            if rd_hyb:
-                lines.append(
-                    f"   ({lm_key}) hybrid vs C: mean={np.mean(rd_hyb):.4e} max={np.max(rd_hyb):.4e}"
-                )
+            if not diags:
+                continue
+            phase = [d["max_phase_diff_rad"] for d in diags]
+            amp = [d["max_amp_frac_diff"] for d in diags]
+            matches = [d["match"] for d in diags]
+            lines.append(f"   ({lm_key}) phase diff:  mean={np.mean(phase):.4f} max={np.max(phase):.4f} rad (detrended)")
+            lines.append(f"   ({lm_key}) |dA/A|:      mean={np.mean(amp):.4e} max={np.max(amp):.4e}")
+            lines.append(f"   ({lm_key}) match:       min={np.min(matches):.8f} mean={np.mean(matches):.8f}")
+
+        # Hybrid summary (compact)
+        has_hybrid = any(
+            r["modes"].get("2,2", {}).get("hybrid_vs_lal") is not None
+            for r in valid_modes
+        )
+        if has_hybrid:
+            lines.append(f"   hybrid (numba:jax) vs LALSim C:")
+            for lm_key in ["2,2", "3,3", "4,4"]:
+                diags = [
+                    r["modes"][lm_key]["hybrid_vs_lal"]
+                    for r in valid_modes
+                    if lm_key in r["modes"] and r["modes"][lm_key]["hybrid_vs_lal"] is not None
+                ]
+                if not diags:
+                    continue
+                phase = [d["max_phase_diff_rad"] for d in diags]
+                matches = [d["match"] for d in diags]
+                lines.append(f"   ({lm_key}) phase diff:  mean={np.mean(phase):.4f} max={np.max(phase):.4f} rad | match: min={np.min(matches):.8f}")
 
     summary = "\n".join(lines)
     with open(os.path.join(RESULTS_DIR, "summary.txt"), "w") as f:
