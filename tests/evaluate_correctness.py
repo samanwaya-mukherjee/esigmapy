@@ -101,7 +101,7 @@ def compare_ode_rhs(params_list, ode_eps=1e-12):
         )
 
         # JAX RHS
-        args_jax = (eta, m1, m2, S1z, S2z, 8, 8)
+        args_jax = (eta, m1, m2, S1z, S2z, 8, 8, x_dot_4pn_SF_val)
         y0_jax = jnp.array([x0, ecc, 0.0, 0.0])
         dydt_jax = eccentric_x_model_odes_jax(0.0, y0_jax, args_jax)
 

@@ -239,13 +239,15 @@ def jax_rhs(m1, m2, S1z, S2z, ecc, f_lower, rad_pn_order=8):
     import lal
 
     from esigmapy.inspiral.jax_backend.inspiral import eccentric_x_model_odes_jax
+    from esigmapy.inspiral.numba_backend.pn_inspiral import x_dot_4pn_SF
 
     total_mass = m1 + m2
     eta = (m1 * m2) / total_mass**2
     omega_init = lal.PI * f_lower * lal.MTSUN_SI
     x0 = (total_mass * omega_init) ** (2.0 / 3.0)
 
-    args = (eta, m1, m2, S1z, S2z, rad_pn_order, rad_pn_order)
+    x_dot_4pn_SF_val = x_dot_4pn_SF(ecc, eta, S1z)
+    args = (eta, m1, m2, S1z, S2z, rad_pn_order, rad_pn_order, x_dot_4pn_SF_val)
     y0 = jnp.array([x0, ecc, 0.0, 0.0])
     dydt = eccentric_x_model_odes_jax(0.0, y0, args)
 

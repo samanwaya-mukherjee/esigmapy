@@ -67,13 +67,16 @@ def estimate_T_max_jax(
 # ---------------------------------------------------------------------------
 
 
-def _make_rhs(rad_pn_order: int, vpnorder: int, x_final: float):
+def _make_rhs(
+    rad_pn_order: int, vpnorder: int, x_final: float, x_dot_4pn_SF_val: float = 0.0
+):
     """
     Return a diffrax-compatible RHS function with PN orders baked in.
 
     ``rad_pn_order`` and ``vpnorder`` are Python ints: captured in the closure
     so that the Python-level ``if radiation_pn_order >= N:`` branches in the
     ODE are resolved at trace time (not treated as JAX dynamic values).
+    ``x_dot_4pn_SF_val`` is precomputed outside JIT (uses polygamma).
     """
 
     def rhs(t, y, args):
@@ -84,7 +87,7 @@ def _make_rhs(rad_pn_order: int, vpnorder: int, x_final: float):
         dydt = eccentric_x_model_odes_jax(
             t,
             y_capped,
-            (eta, m1, m2, S1z, S2z, rad_pn_order, vpnorder),
+            (eta, m1, m2, S1z, S2z, rad_pn_order, vpnorder, x_dot_4pn_SF_val),
         )
         return jnp.where(past_isco, jnp.zeros_like(dydt), dydt)
 
@@ -106,6 +109,7 @@ def integrate_esigma_dynamics_jax(
     ode_rtol: float = 1e-8,
     ode_atol: float = 1e-8,
     max_steps: int = 100_000_000,
+    x_dot_4pn_SF_val: float = 0.0,
 ) -> tuple[jax.Array, jax.Array]:
     """
     Integrate the ESIGMA ODE system using diffrax (Tsit5 solver).
@@ -141,6 +145,9 @@ def integrate_esigma_dynamics_jax(
         Relative and absolute tolerances for the adaptive step-size controller.
     max_steps : int
         Maximum number of internal solver steps.
+    x_dot_4pn_SF_val : float
+        Precomputed 4PN self-force horizon flux term (uses polygamma, so
+        computed outside the JIT boundary).
 
     Returns
     -------
@@ -152,7 +159,7 @@ def integrate_esigma_dynamics_jax(
     n_steps = int(T_max_M / dt_M) + 1
     t_arr = jnp.linspace(0.0, T_max_M, n_steps)
 
-    rhs = _make_rhs(rad_pn_order, vpnorder, x_final)
+    rhs = _make_rhs(rad_pn_order, vpnorder, x_final, x_dot_4pn_SF_val)
 
     sol = diffrax.diffeqsolve(
         terms=diffrax.ODETerm(rhs),
@@ -246,6 +253,10 @@ def inspiral_esigma_dynamics_jax(
 
     y0 = jnp.array([x_init, e_init, mean_anom_init, 0.0])
 
+    from ..numba_backend.pn_inspiral import x_dot_4pn_SF
+
+    x_dot_4pn_SF_val = x_dot_4pn_SF(e_init, eta, S1z)
+
     t_arr_M, y_arr = integrate_esigma_dynamics_jax(
         y0=y0,
         eta=eta,
@@ -260,6 +271,7 @@ def inspiral_esigma_dynamics_jax(
         vpnorder=vpnorder,
         ode_rtol=ode_eps,
         ode_atol=ode_eps,
+        x_dot_4pn_SF_val=x_dot_4pn_SF_val,
     )
 
     # Convert to NumPy for post-processing

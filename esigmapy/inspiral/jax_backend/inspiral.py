@@ -2979,7 +2979,7 @@ def phi_dot_4_5_pn_jax(e, eta, x):
 # ============ Dispatcher functions ==========================================
 
 
-def dx_dt_jax(e, eta, m1, m2, S1z, S2z, x, radiation_pn_order):
+def dx_dt_jax(e, eta, m1, m2, S1z, S2z, x, radiation_pn_order, x_dot_4pn_SF_val=0.0):
     """Compute dx/dt at given PN order. radiation_pn_order is static (Python int)."""
     x2 = x * x
     x3 = x2 * x
@@ -3022,8 +3022,8 @@ def dx_dt_jax(e, eta, m1, m2, S1z, S2z, x, radiation_pn_order):
             x_dot_4pn_jax(e, eta, x)
             + x_dot_4pnSO_jax(e, eta, m1, m2, S1z, S2z)
             + x_dot_4pnSS_jax(e, eta, m1, m2, S1z, S2z)
+            + x_dot_4pn_SF_val
         ) * (x2 * x2)
-        # x_dot_4pn_SF is commented out in dispatcher
 
     if radiation_pn_order >= 9:
         inst = inst + x_dot_4_5_pn_jax(e, eta, x) * (x2 * x2) * sqx
@@ -3132,12 +3132,15 @@ def eccentric_x_model_odes_jax(t, y, args):
     ODE RHS for eccentric gravitational-wave inspiral.
 
     State:  y = [x, e, l, phi]
-    Args:   dict or tuple with keys/positions
-            (eta, m1, m2, S1z, S2z, rad_pn_order, vpnorder)
+    Args:   tuple (eta, m1, m2, S1z, S2z, rad_pn_order, vpnorder[, x_dot_4pn_SF_val])
 
     Returns jnp.array([xdot, edot, ldot, phidot])
     """
-    eta, m1, m2, S1z, S2z, rad_pn_order, vpnorder = args
+    if len(args) == 8:
+        eta, m1, m2, S1z, S2z, rad_pn_order, vpnorder, x_dot_4pn_SF_val = args
+    else:
+        eta, m1, m2, S1z, S2z, rad_pn_order, vpnorder = args
+        x_dot_4pn_SF_val = 0.0
 
     x = y[0]
     e = y[1]
@@ -3145,7 +3148,7 @@ def eccentric_x_model_odes_jax(t, y, args):
 
     u = solve_kepler_jax(l, e)
 
-    xdot = dx_dt_jax(e, eta, m1, m2, S1z, S2z, x, rad_pn_order)
+    xdot = dx_dt_jax(e, eta, m1, m2, S1z, S2z, x, rad_pn_order, x_dot_4pn_SF_val)
     edot = de_dt_jax(e, eta, m1, m2, S1z, S2z, x, rad_pn_order)
     ldot = dl_dt_jax(e, eta, m1, m2, S1z, S2z, x, rad_pn_order)
     phidot = dphi_dt_jax(u, eta, m1, m2, S1z, S2z, x, e, vpnorder)

@@ -1372,11 +1372,10 @@ def x_dot_4pn_SF(e: float, eta: float, S1z: float) -> float:
     S1z2 = S1z * S1z
     S1z3 = S1z2 * S1z
     S1z4 = S1z3 * S1z
-    # Common denominator used in the PolyGamma arguments
     denom = np.sqrt(1.0 - S1z2)
 
-    PolyGammaFunc01 = polygamma(0, 3.0)
-    PolyGammaFunc02 = polygamma(0, 3.0)
+    PolyGammaFunc01 = polygamma(0, 3.0 - (2j * S1z) / denom)
+    PolyGammaFunc02 = polygamma(0, 3.0 + (2j * S1z) / denom)
 
     inner_term = (
         -1
@@ -4056,8 +4055,8 @@ def dx_dt(
             x_dot_4pn(e, eta, x)
             + x_dot_4pnSO(e, eta, m1, m2, S1z, S2z)
             + x_dot_4pnSS(e, eta, m1, m2, S1z, S2z)
+            + x_dot_4pn_SF_val
         ) * (x2 * x2)
-        # inst += x_dot_4pn_SF_val * (x2 * x2)
 
     if radiation_pn_order >= 9:
         inst += x_dot_4_5_pn(e, eta, x) * (x2 * x2) * sqx
