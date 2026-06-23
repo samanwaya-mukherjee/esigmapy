@@ -70,7 +70,10 @@ def run_single_system_wrapper(args):
     }
 
     if integrator == "C":
-        import esigmapy.inspiral.lalsimulation_backend.generator as c_gen
+        try:
+            import esigmapy.inspiral.lalsimulation_backend.generator as c_gen
+        except ModuleNotFoundError:
+            import esigmapy.generator as c_gen
         import lalsimulation as ls
 
         # Warmup
@@ -296,22 +299,42 @@ def run_single_system_wrapper(args):
             times_full.append(times_dyn[-1] + times_modes[-1])
 
     else:
-        from esigmapy.inspiral.numba_backend.generator import (
-            get_inspiral_esigma_modes_py,
-        )
-        from esigmapy.inspiral.numba_backend.pn_main import (
-            inspiral_esigma_dynamics,
-            inspiral_esigma_mode_from_dynamics,
-        )
+        try:
+            from esigmapy.inspiral.numba_backend.generator import (
+                get_inspiral_esigma_modes_py,
+            )
+            from esigmapy.inspiral.numba_backend.pn_main import (
+                inspiral_esigma_dynamics,
+                inspiral_esigma_mode_from_dynamics,
+            )
+        except ModuleNotFoundError:
+            from esigmapy.python_codes.generator_python import (
+                get_inspiral_esigma_modes_py,
+            )
+            from esigmapy.python_codes.esigma_pn_main import (
+                inspiral_esigma_dynamics,
+                inspiral_esigma_mode_from_dynamics,
+            )
+
+        # Detect API version: old code lacks integrator/ode_eps params
+        import inspect
+
+        _modes_params = inspect.signature(get_inspiral_esigma_modes_py).parameters
+        _has_new_api = "integrator" in _modes_params or "ode_eps" in _modes_params
+
+        modes_extra = {"mode_pn_order": mode_pn_order}
+        if _has_new_api:
+            modes_extra["integrator"] = integrator
+            modes_extra["ode_eps"] = ode_eps
+
+        _dyn_params = inspect.signature(inspiral_esigma_dynamics).parameters
+        dyn_extra = {}
+        if "integrator" in _dyn_params:
+            dyn_extra["integrator"] = integrator
 
         # Warmup
         try:
-            get_inspiral_esigma_modes_py(
-                **kwargs,
-                integrator=integrator,
-                ode_eps=ode_eps,
-                mode_pn_order=mode_pn_order,
-            )
+            get_inspiral_esigma_modes_py(**kwargs, **modes_extra)
         except Exception:
             pass
 
@@ -321,12 +344,7 @@ def run_single_system_wrapper(args):
 
         for _ in range(2):
             start = time.perf_counter()
-            get_inspiral_esigma_modes_py(
-                **kwargs,
-                integrator=integrator,
-                ode_eps=ode_eps,
-                mode_pn_order=mode_pn_order,
-            )
+            get_inspiral_esigma_modes_py(**kwargs, **modes_extra)
             times_full.append(time.perf_counter() - start)
 
             start = time.perf_counter()
@@ -340,7 +358,7 @@ def run_single_system_wrapper(args):
                 kwargs["mean_anomaly"],
                 ode_eps,
                 1.0 / kwargs["delta_t"],
-                integrator=integrator,
+                **dyn_extra,
             )
             times_dyn.append(time.perf_counter() - start)
 
@@ -558,12 +576,12 @@ def main():
         "commits",
         nargs="*",
         default=[
-            "93c92f1178b85b5f9b00d6f62e9914cf4e052ed8:lsoda",
             "HEAD:dop853",
             "HEAD:lsoda",
             "HEAD:C",
             "HEAD:JAX",
             "HEAD:numba:jax",
+            # "31ad6eed9226b3505774e841239807230e696747:lsoda"
         ],
         help="List of <commit>:<integrator> to benchmark",
     )
@@ -611,12 +629,16 @@ def main():
     shutil.copy(sys.argv[0], "/tmp/run_worker.py")
 
     if not args.plot_only:
+        head_sha = (
+            subprocess.check_output(["git", "rev-parse", "HEAD"]).decode().strip()
+        )
         try:
             for commit, integrator in parsed_configs:
+                checkout_ref = current_branch if commit == "HEAD" else commit
                 print(f"\n===========================================")
                 print(f"Testing commit {commit} with {integrator}...")
                 print(f"===========================================\n")
-                subprocess.run(["git", "checkout", commit], check=True)
+                subprocess.run(["git", "checkout", checkout_ref], check=True)
 
                 env = os.environ.copy()
                 env["PYTHONPATH"] = ROOT_DIR
