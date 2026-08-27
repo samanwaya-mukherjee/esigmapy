@@ -495,7 +495,7 @@ def get_inspiral_esigma_waveform_py(
         f_lower=f_lower,
         delta_t=delta_t,
         modes_to_use=modes_to_use,
-        include_conjugate_modes=True,  # Always include conjugate modes while generating polarizations
+        # include_conjugate_modes=True,  # Always include conjugate modes while generating polarizations
         return_orbital_params=return_orbital_params,
         verbose=verbose,
         return_pycbc_timeseries=False,
@@ -1151,7 +1151,7 @@ def get_modes(mass1, mass2, f_lower, delta_t, **kwargs):
 
 
 def get_waveform(mass1, mass2, f_lower, delta_t, **kwargs):
-    """Generate inspiral h_plus, h_cross using the numba backend."""
+
     return get_inspiral_esigma_waveform_py(
         mass1,
         mass2,
@@ -1161,10 +1161,20 @@ def get_waveform(mass1, mass2, f_lower, delta_t, **kwargs):
         spin2z=kwargs.get("spin2z", 0.0),
         eccentricity=kwargs.get("eccentricity", 0.0),
         mean_anomaly=kwargs.get("mean_anomaly", 0.0),
+        inclination=kwargs.get("inclination", 0.0),
+        coa_phase=kwargs.get("coa_phase", 0.0),
         distance=kwargs.get("distance", 1.0),
-        modes_to_use=kwargs.get("modes_to_use", [(2, 2), (3, 3), (4, 4)]),
-        include_conjugate_modes=kwargs.get("include_conjugate_modes", True),
-        return_pycbc_timeseries=False,
+        f_ref=kwargs.get("f_ref", None),
+        modes_to_use=kwargs.get(
+            "modes_to_use", [(2, 2), (3, 3), (4, 4)]
+        ),
+        return_orbital_params=kwargs.get(
+            "return_orbital_params", False
+        ),
+        return_pycbc_timeseries=kwargs.get(
+            "return_pycbc_timeseries", True
+        ),
+        verbose=kwargs.get("verbose", False),
         integrator=kwargs.get("integrator", "dop853"),
         ode_eps=kwargs.get("ode_eps", 1e-11),
     )
