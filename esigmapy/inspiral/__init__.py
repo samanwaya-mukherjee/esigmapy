@@ -58,7 +58,7 @@ def _inject_config_defaults(kwargs, backend_name):
     return kwargs
 
 
-def get_modes(mass1, mass2, f_lower, delta_t, *, backend=None, **kwargs):
+def get_inspiral_modes(mass1, mass2, f_lower, delta_t, *, backend=None, **kwargs):
     """Generate inspiral GW modes.
 
     Parameters
@@ -94,7 +94,7 @@ def get_modes(mass1, mass2, f_lower, delta_t, *, backend=None, **kwargs):
         )
 
 
-def get_dynamics(mass1, mass2, f_lower, delta_t, *, backend=None, **kwargs):
+def get_inspiral_dynamics(mass1, mass2, f_lower, delta_t, *, backend=None, **kwargs):
     """Generate inspiral orbital dynamics.
 
     Returns
@@ -109,7 +109,7 @@ def get_dynamics(mass1, mass2, f_lower, delta_t, *, backend=None, **kwargs):
     )
 
 
-def get_waveform(mass1, mass2, f_lower, delta_t, *, backend=None, **kwargs):
+def get_inspiral_waveform(mass1, mass2, f_lower, delta_t, *, backend=None, **kwargs):
     """Generate inspiral GW polarizations (h_plus, h_cross).
 
     Returns
